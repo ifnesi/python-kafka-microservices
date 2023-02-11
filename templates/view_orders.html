@@ -1,0 +1,28 @@
+{% extends 'root.html' %}
+
+{% block content %}
+<p class="font-weight-bold">View orders</p>
+<table class="table table-striped table-hover">
+    <tbody>
+        <thead>
+            <tr>
+                <th>Order ID</th>
+                <th>Order Time</th>
+                <th>Name</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        {% for order_id, order in order_ids.items() %}
+        <tr>
+            <th><a href="/orders/{{order_id}}">{{order_id}}</a></th>
+            <td>{{order.timestamp}}</td>
+            <td>{{order.name}}</td>
+            <td>{{order.status_str}}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+<a href="/orders">Refresh</a>
+<br>
+<a href="/">Go back home</a>
+{% endblock %}

@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>Confluent | {{title}}</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/favicon.ico') }}">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
+    <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+</head>
+
+<body>
+    <div class="container">
+        {% autoescape false %}
+        <h3 class="text-center mt-1"><img src="{{ url_for('static', filename='images/logo.png') }}" width=58
+                class="map img-resonsive" /> Confluent Pizza Store</h3>
+        <h6 class="text-center">Order your pizza with Confluent, powered by Apache Kafka &copy;</h6>
+        {% endautoescape %}
+        <hr>
+        {% block content %}{% endblock %}
+    </div>
+</body>
+
+</html>

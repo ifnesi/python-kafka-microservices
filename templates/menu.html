@@ -1,0 +1,67 @@
+{% extends 'root.html' %}
+
+{% block content %}
+<p class="font-weight-bold">Customise your pizza</p>
+<form action="/" class="needs-validation" method="POST">
+    <div class="row">
+        <div class="col-12">
+            <div class="form-group">
+                <label for="name">Your name:</label>
+                <input type="text" class="form-control" name="name" required>
+                <div class="invalid-feedback">Please fill out this field.</div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-3">
+            <label for="sauce">Sauce:</label>
+            {% for sauce in sauces %}
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="sauce" value="{{sauce}}" required>
+                <label class="form-check-label">
+                    {{sauce}}
+                </label>
+            </div>
+            {% endfor %}
+        </div>
+        <div class="col-3">
+            <label for="cheese">Cheese:</label>
+            {% for cheese in cheeses %}
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="cheese" value="{{cheese}}" required>
+                <label class="form-check-label">
+                    {{cheese}}
+                </label>
+            </div>
+            {% endfor %}
+        </div>
+        <div class="col-3">
+            <label for="main_topping">Main topping:</label>
+            {% for main_topping in main_toppings %}
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="main_topping" value="{{main_topping}}" required>
+                <label class="form-check-label">
+                    {{main_topping}}
+                </label>
+            </div>
+            {% endfor %}
+        </div>
+        <div class="col-3">
+            <label for="extra_topping">Extra toppings:</label>
+            {% for extra_topping in extra_toppings %}
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="extra_topping" value="{{extra_topping}}">
+                <label class="form-check-label">
+                    {{extra_topping}}
+                </label>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    <br>
+    <button type="submit" class="btn btn-primary">Submit your order</button>
+    <button type="reset" class="btn btn-warning">Clear form</button>
+</form>
+<br>
+<a href="/orders">View all orders</a>
+{% endblock %}

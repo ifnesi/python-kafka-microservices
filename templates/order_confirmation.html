@@ -1,0 +1,36 @@
+{% extends 'root.html' %}
+
+{% block content %}
+<p class="font-weight-bold">We have received your order!</p>
+<table class="table table-striped table-hover">
+    <tbody>
+        <tr>
+            <th>Order ID</th>
+            {% autoescape false %}
+            <td><a href="orders/{{order_id}}">{{order_id}}</a></td>
+            {% endautoescape %}
+        </tr>
+        <tr>
+            <th>Name</th>
+            <td>{{name}}</td>
+        </tr>
+        <tr>
+            <th>Sauce</th>
+            <td>{{sauce}}</td>
+        </tr>
+        <tr>
+            <th>Cheese</th>
+            <td>{{cheese}}</td>
+        </tr>
+        <tr>
+            <th>Main topping</th>
+            <td>{{main_topping}}</td>
+        </tr>
+        <tr>
+            <th>Extra topping(s)</th>
+            <td>{{extra_toppings}}</td>
+        </tr>
+    </tbody>
+</table>
+<a href="/">Go back home</a>
+{% endblock %}
