@@ -162,4 +162,4 @@ One very important element of any Kafka consumer is by handling OS signals to be
 (msvc_delivery) INFO 21:46:57.341 - Graceful shutdown completed
 ```
 
-This project wass based on: https://www.confluent.io/en-gb/blog/event-driven-microservices-with-python-and-kafka/
+This project was based on: https://www.confluent.io/en-gb/blog/event-driven-microservices-with-python-and-kafka/
