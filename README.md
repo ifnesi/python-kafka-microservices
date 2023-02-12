@@ -53,6 +53,7 @@ Below is a more detailed view of all microservices and to what Kafka topics thei
         sasl.password = {{ CLUSTER_API_SECRET }}
         ```
   - In a real life scenario each microservice (consumer in a consumer group) could be instantiated for as many times as there are partitions to the topic, however that is just for demo purposes only one instance will be spawn
+  - Also, for the simplicity of the demo, no Schema Registry is being used. That is not an ideal scenario as the "contract" between Producers and Consumers are "implicitly hard coded" other than being declared through the schema registry
 - Open your browser and navigate to http://127.0.0.1:8000
 - To stop the demo:
   - To stop all services at once: ```./stop_demo.sh```
