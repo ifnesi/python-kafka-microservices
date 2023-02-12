@@ -1,4 +1,4 @@
-# python-kafka-microservices
+# <img src="static/images/logo.png" width="32" /> python-kafka-microservices <img src="static/images/logo.png" width="32" />
 This is an example of a microservice architecture using the CQRS pattern (Command and Query Responsibility Segregation), and nothing better to explain it by using as reference a pizza delivery service. Who doesn't love pizza? :)
 
 ## Service Flow
