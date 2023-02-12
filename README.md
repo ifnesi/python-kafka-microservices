@@ -3,4 +3,4 @@ Based on: https://www.confluent.io/en-gb/blog/event-driven-microservices-with-py
 
 # STILL NOT FINISHED, PENDING TESTS AND DOCS!!!
 
-![image](docs/architecture.png)
+![image](docs/architecture_cqrs.png)
