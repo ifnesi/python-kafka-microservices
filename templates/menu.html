@@ -1,7 +1,7 @@
 {% extends 'root.html' %}
 
 {% block content %}
-<p class="font-weight-bold">Customise your pizza</p>
+<h4><span class="badge badge-dark w-100">Customise your pizza</span></h4>
 <form action="/" class="needs-validation" method="POST">
     <div class="row">
         <div class="col-12">
@@ -62,6 +62,4 @@
     <button type="submit" class="btn btn-primary">Submit your order</button>
     <button type="reset" class="btn btn-warning">Clear form</button>
 </form>
-<br>
-<a href="/orders">View all orders</a>
 {% endblock %}

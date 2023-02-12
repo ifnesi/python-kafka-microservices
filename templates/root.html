@@ -7,18 +7,42 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
     <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </head>
 
 <body>
     <div class="container">
         {% autoescape false %}
-        <h3 class="text-center mt-1"><img src="{{ url_for('static', filename='images/logo.png') }}" width=58
-                class="map img-resonsive" /> Confluent Pizza Store</h3>
-        <h6 class="text-center">Order your pizza with Confluent, powered by Apache Kafka &copy;</h6>
         {% endautoescape %}
-        <hr>
+        <nav class="navbar navbar-expand-lg navbar-light pb-2">
+            <p class="navbar-brand"><img src="{{ url_for('static', filename='images/logo.png') }}" width=62
+                    class="map img-resonsive" /></p>
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+                aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                <ul class="navbar-nav mr-auto">
+                    <li class="nav-item active">
+                        <a class="nav-link" href="/" title="Place your order">View Menu</a>
+                    </li>
+                    <li class="nav-item active">
+                        <a class="nav-link" href="/orders" title="View all orders">All Orders</a>
+                    </li>
+                </ul>
+                <form class="form-inline my-2 my-lg-0">
+                    <input class="form-control mr-sm-2" type="order" placeholder="Order ID" id="order_id"
+                        aria-label="Search" value="{{order_id}}">
+                    <a href="javascript:void(0);" class="btn btn-outline-dark my-2 my-sm-0"
+                        onClick="javascript:viewOrder();">Search</a>
+                </form>
+            </div>
+        </nav>
         {% block content %}{% endblock %}
+        <p class="text-center pt-3 text-secondary small">Order your pizza with Confluent, powered by Apache Kafka &copy;
+        </p>
     </div>
 </body>
 

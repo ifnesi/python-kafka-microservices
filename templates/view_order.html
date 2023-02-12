@@ -1,7 +1,7 @@
 {% extends 'root.html' %}
 
 {% block content %}
-<p class="font-weight-bold">Order status</p>
+<h4><span class="badge badge-dark w-100">Order status</span></h4>
 {% if error %}
 <p class="font-weight-bold text-danger">{{error}}</p>
 {% else %}
@@ -28,7 +28,7 @@
     </tbody>
 </table>
 {% endif %}
-<a href="/orders">View all orders</a>
-<br>
-<a href="/">Go back home</a>
+<a href="javascript:void(0);" onClick="window.location.reload();"><img
+        src="{{ url_for('static', filename='images/refresh.png') }}" width=48 title="Refresh page"
+        class="img_border" /></a>
 {% endblock %}

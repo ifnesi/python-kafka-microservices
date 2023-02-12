@@ -1,0 +1,15 @@
+.nav-link:hover {
+    text-decoration: underline;
+}
+
+.img_border {
+    border: solid thin transparent;
+    border-radius: 8px;
+}
+
+.img_border:hover,
+.img_border:focus,
+.img_border:target,
+.img_border:active {
+    border-color: rgb(3, 3, 174);
+}
