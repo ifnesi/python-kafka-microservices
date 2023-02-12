@@ -207,6 +207,7 @@ def get_order(order_id):
                 "view_order.html",
                 title="Order",
                 error=f"Order ID not found: {order_id}",
+                order_id=order_id,
             )
 
 
