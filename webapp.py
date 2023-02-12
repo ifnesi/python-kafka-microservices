@@ -23,7 +23,7 @@ import hashlib
 import logging
 import datetime
 
-from flask import Flask, render_template, request
+from flask import Flask, render_template, jsonify, request
 
 from utils import (
     DB,
@@ -159,6 +159,20 @@ def view_orders():
                 title="Orders",
                 order_ids=db.get_orders(),
             )
+
+
+@app.route("/orders/<order_id>", methods=["POST"])
+def get_order_ajax(order_id):
+    """View order by order_id (AJAX call)"""
+    with graceful_shutdown as _:
+        with DB(ORDERS_DB, ORDER_TABLE) as db:
+            order_details = db.get_order_id(order_id)
+            if order_details is not None:
+                return {
+                    "str": order_details["status_str"],
+                    "status": order_details["status"],
+                }
+    return ""
 
 
 @app.route("/orders/<order_id>", methods=["GET"])

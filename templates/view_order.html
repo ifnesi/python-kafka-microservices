@@ -1,6 +1,11 @@
 {% extends 'root.html' %}
 
+{% block header %}
+<script src="{{ url_for('static', filename='js/ajax_order.js') }}"></script>
+{% endblock %}
+
 {% block content %}
+<input type="hidden" id="order_id" value={% if error %}""{% else %}"{{order_id}}"{% endif %} />
 <h4><span class="badge badge-dark w-100">Order status</span></h4>
 {% if error %}
 <p class="font-weight-bold text-danger">{{error}}</p>
@@ -20,7 +25,7 @@
             <td><a href="/orders/{{order_id}}">{{order_id}}</a></td>
             <td>{{timestamp}}</td>
             <td>{{name}}</td>
-            <td>{{status}}</td>
+            <td><span id="order_status">{{status}}</span></td>
             {% autoescape false %}
             <td>{{order}}</td>
             {% endautoescape %}
@@ -28,7 +33,4 @@
     </tbody>
 </table>
 {% endif %}
-<a href="javascript:void(0);" onClick="window.location.reload();"><img
-        src="{{ url_for('static', filename='images/refresh.png') }}" width=48 title="Refresh page"
-        class="img_border" /></a>
 {% endblock %}

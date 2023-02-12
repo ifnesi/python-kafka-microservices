@@ -4,12 +4,15 @@
 
 .img_border {
     border: solid thin transparent;
-    border-radius: 8px;
+    border-radius: 4px;
+    padding: 2px 2px 2px 2px;
+    margin: 0;
+    background-color: darkgray;
 }
 
 .img_border:hover,
 .img_border:focus,
 .img_border:target,
 .img_border:active {
-    border-color: rgb(3, 3, 174);
+    border-color: rgb(165, 165, 165);
 }
