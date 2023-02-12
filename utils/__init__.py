@@ -1,4 +1,7 @@
 import os
+import sys
+import signal
+import logging
 import sqlite3
 import datetime
 
@@ -6,16 +9,44 @@ from configparser import ConfigParser
 from confluent_kafka import Producer, Consumer
 
 
-def log(
-    level: str,
+# Global variables
+ORDER_STATUSES = {
+    -1: "Oops! Unknown order",
+    100: "Order received and being prepared",
+    200: "Your pizza is in the oven",
+    300: "Your pizza is out for delivery",
+    400: "Your pizza was delivered",
+    -999: "Oops! Invalid order",
+}
+
+
+# Generic functions
+def log_ini(
     script: str,
-    message: str,
+    level: int = logging.INFO,
 ):
-    """Display log message on the console"""
-    print(f"[{level} | {script}]: {message}")
+    logging.basicConfig(
+        format=f"\n({script}) %(levelname)s %(asctime)s.%(msecs)03d - %(message)s",
+        level=level,
+        datefmt="%H:%M:%S",
+    )
+
+
+def validate_cli_args(script: str):
+    if len(sys.argv) <= 1:
+        logging.error(
+            f"Missing configuration file. Usage: {script}.py {{CONFIGURATION_FILE}} (under the folder 'config/')",
+        )
+        sys.exit(0)
+    else:
+        config_file = os.path.join("config", sys.argv[1])
+        if not os.path.isfile(config_file):
+            logging.error(f"Configuration file not found: {config_file}")
+            sys.exit(0)
 
 
 def save_pid(script: str):
+    """Save PID to disk"""
     PID_FOLDER = "pid"
     if not os.path.isdir(PID_FOLDER):
         os.mkdir(PID_FOLDER)
@@ -25,6 +56,13 @@ def save_pid(script: str):
 
 def get_script_name(file: str) -> str:
     return os.path.splitext(os.path.basename(file))[0]
+
+
+def get_string_status(status: int) -> str:
+    return ORDER_STATUSES.get(
+        status,
+        f"Oops! Unknown status ({status})",
+    )
 
 
 def set_producer_consumer(
@@ -65,9 +103,15 @@ def set_producer_consumer(
 
     # Set consumer config
     if not disable_consumer:
+        consumer_common_config = {
+            "enable.auto.commit": False,
+            "auto.offset.reset": "earliest",
+            "max.poll.interval.ms": 3000000,
+        }
         consumer = Consumer(
             {
                 **kafka_config,
+                **consumer_common_config,
                 **consumer_extra_config,
             }
         )
@@ -83,22 +127,56 @@ def set_producer_consumer(
 def delivery_report(err, msg):
     """Reports the failure or success of an event delivery"""
     if err is not None:
-        log(
-            "ERROR",
-            "---",
-            "Delivery failed for Data record {msg.key()}: {err}",
-        )
+        logging.error(f"Delivery failed for Data record {msg.key()}: {err}")
     else:
         msg_key = "" if msg.key() is None else msg.key().decode()
         msg_value = "" if msg.value() is None else msg.value().decode()
-        log(
-            "INFO",
-            "---",
-            f"Event successfully produced\n - Topic: {msg.topic()}\n - Partition: {msg.partition()}\n - Offset: {msg.offset()}\n - Key: {msg_key}\n - Value: {msg_value}",
+        logging.info(
+            f"Event successfully produced\n - Topic '{msg.topic()}', Partition #{msg.partition()}, Offset #{msg.offset()}\n - Key: {msg_key}\n - Value: {msg_value}"
         )
 
 
+# Generic classes
+class GracefulShutdown:
+    """Class/context manager to manage graceful shutdown"""
+
+    def __init__(self, consumer=None):
+        self.was_signal_set = False
+        self.safe_to_terminate = True
+        self.consumer = consumer
+        # Set signal handlers
+        signal.signal(signal.SIGINT, self.signal_handler)
+        signal.signal(signal.SIGTERM, self.signal_handler)
+
+    def __enter__(self):
+        self.safe_to_terminate = False
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.safe_to_terminate = True
+        if self.was_signal_set:
+            if self.consumer is not None:
+                try:
+                    # Close down consumer to commit final offsets.
+                    logging.info("Closing consumer group...")
+                    self.consumer.close()
+                    logging.info("Consumer group successfully closed")
+                except Exception as err:
+                    logging.error(f"Unable to close consumer group: {err}")
+            self.signal_handler(signal.SIGTERM, None)
+
+    def signal_handler(self, sig, frame):
+        if not self.was_signal_set:
+            logging.info("Starting graceful shutdown...")
+        if self.safe_to_terminate:
+            logging.info("Graceful shutdown completed")
+            sys.exit(0)
+        self.was_signal_set = True
+
+
 class DB:
+    """Class/context manager to connect to local DB"""
+
     def __init__(
         self,
         orders_db: str,
@@ -108,14 +186,6 @@ class DB:
         self.order_table = order_table
         self.conn = None
         self.cur = None
-        self.statuses = {
-            -1: "Oops! Unknown Order ID",
-            100: "Order received and being prepared",
-            200: "Your pizza is in the oven",
-            300: "Your pizza is out for delivery",
-            400: "Your pizza is delivered",
-            -999: "Oops! Invalid Order ID",
-        }
 
     def __enter__(self):
         self.conn = sqlite3.connect(self.orders_db)
@@ -147,7 +217,8 @@ class DB:
 
     def delete_old_orders(self, hours: int = 1):
         self.execute(
-            f"""DELETE FROM orders WHERE timestamp < {int(datetime.datetime.now().timestamp() * 1000) - hours * 60 * 60 * 1000}"""
+            f"""DELETE FROM orders
+            WHERE timestamp < {int(datetime.datetime.now().timestamp() * 1000) - hours * 60 * 60 * 1000}"""
         )
         self.conn.commit()
 
@@ -164,7 +235,7 @@ class DB:
             cols = list(map(lambda x: x[0], self.cur.description))
             data = dict(zip(cols, data))
             data["extras"] = ", ".join(data["extras"].split(","))
-            data["status_str"] = self.statuses.get(data["status"], "???")
+            data["status_str"] = get_string_status(data["status"])
         return data
 
     def get_orders(
@@ -181,8 +252,8 @@ class DB:
                 data_all[item["order_id"]]["extras"] = ", ".join(
                     data_all[item["order_id"]]["extras"].split(",")
                 )
-                data_all[item["order_id"]]["status_str"] = self.statuses.get(
-                    data_all[item["order_id"]]["status"], "???"
+                data_all[item["order_id"]]["status_str"] = get_string_status(
+                    data_all[item["order_id"]]["status"]
                 )
                 data_all[item["order_id"]][
                     "timestamp"
@@ -209,19 +280,27 @@ class DB:
         order_details: dict,
     ):
         self.execute(
-            f"""
-        INSERT INTO {self.order_table} (order_id,timestamp,name,customer_id,status,sauce,cheese,topping,extras)
-        VALUES (
-            '{order_id}',
-            {int(datetime.datetime.now().timestamp() * 1000)},
-            '{order_details["order"]["name"]}',
-            '{order_details["order"]["customer_id"]}',
-            100,
-            '{order_details["order"]["sauce"]}',
-            '{order_details["order"]["cheese"]}',
-            '{order_details["order"]["main_topping"]}',
-            '{",".join(order_details["order"]["extra_toppings"])}'
-        )
-        """
+            f"""INSERT INTO {self.order_table} (
+                order_id,
+                timestamp,
+                name,
+                customer_id,
+                status,
+                sauce,
+                cheese,
+                topping,
+                extras
+            )
+            VALUES (
+                '{order_id}',
+                {int(datetime.datetime.now().timestamp() * 1000)},
+                '{order_details["order"]["name"]}',
+                '{order_details["order"]["customer_id"]}',
+                100,
+                '{order_details["order"]["sauce"]}',
+                '{order_details["order"]["cheese"]}',
+                '{order_details["order"]["main_topping"]}',
+                '{",".join(order_details["order"]["extra_toppings"])}'
+            )"""
         )
         self.conn.commit()

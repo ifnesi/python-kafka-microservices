@@ -18,119 +18,101 @@
 
 import sys
 import json
-import signal
+import logging
 
-from utils import DB, set_producer_consumer, get_script_name, log, save_pid
+
+from utils import (
+    DB,
+    GracefulShutdown,
+    log_ini,
+    save_pid,
+    get_script_name,
+    validate_cli_args,
+    get_string_status,
+    set_producer_consumer,
+)
 
 
 # Global variables
-SCRIPT = get_script_name(__file__)
 CONSUME_TOPICS = ["pizza-status"]
 ORDERS_DB = "orders.db"
 ORDER_TABLE = "orders"
-abort_script = True
-signal_set = False
+SCRIPT = get_script_name(__file__)
+log_ini(SCRIPT)
+graceful_shutdown = None
+consumer = None
 
 
 # General functions
-def signal_handler(sig, frame):
-    global signal_set, abort_script
-    if not signal_set:
-        log("INFO", SCRIPT, "Starting graceful shutdown...")
-    if abort_script:
-        log("INFO", SCRIPT, "Graceful shutdown completed")
-        sys.exit(0)
-    signal_set = True
-
-
 def get_pizza_status():
     """Subscribe to pizza-status topic to update in-memory DB (order_ids dict)"""
-    global signal_set, abort_script
     consumer.subscribe(CONSUME_TOPICS)
-    log(
-        "INFO",
-        SCRIPT,
-        f"Subscribed to topic(s): {', '.join(CONSUME_TOPICS)}",
-    )
+    logging.info(f"Subscribed to topic(s): {', '.join(CONSUME_TOPICS)}")
     while True:
-        abort_script = False
-        event = consumer.poll(1.0)
-        if event is not None:
-            if event.error():
-                log(
-                    "ERROR",
-                    SCRIPT,
-                    event.error(),
-                )
-            else:
-                try:
-                    order_id = event.key().decode()
-                    with DB(ORDERS_DB, ORDER_TABLE) as db:
-                        order_data = db.get_order_id(
-                            order_id,
-                        )
-                        if order_data is not None:
-                            try:
-                                pizza_status = json.loads(event.value().decode()).get(
-                                    "status", -1
-                                )
-                            except Exception as err1:
-                                pizza_status = -999
-                                log(
-                                    "ERROR",
-                                    SCRIPT,
-                                    f"Error when processing event.value() {event.value()}: {err1}",
-                                )
-                            finally:
-                                log(
-                                    "INFO",
-                                    SCRIPT,
-                                    f"Order ID '{order_id}' had its status updated to {pizza_status}",
-                                )
-                                db.update_order_status(
-                                    order_id,
-                                    pizza_status,
-                                )
-                        else:
-                            log(
-                                "ERROR",
-                                SCRIPT,
-                                f"Order ID not found: {order_id}",
+        with graceful_shutdown as _:
+            event = consumer.poll(0.25)
+            if event is not None:
+                if event.error():
+                    logging.error(event.error())
+                else:
+                    try:
+                        order_id = event.key().decode()
+                        with DB(ORDERS_DB, ORDER_TABLE) as db:
+                            order_data = db.get_order_id(
+                                order_id,
                             )
+                            if order_data is not None:
+                                try:
+                                    pizza_status = json.loads(
+                                        event.value().decode()
+                                    ).get("status", -1)
+                                except Exception as err1:
+                                    pizza_status = -999
+                                    logging.error(
+                                        f"Error when processing event.value() {event.value()}: {err1}"
+                                    )
+                                finally:
+                                    logging.info(
+                                        f"Order '{order_id}' status updated: {get_string_status(pizza_status)} ({pizza_status})"
+                                    )
+                                    db.update_order_status(
+                                        order_id,
+                                        pizza_status,
+                                    )
+                            else:
+                                logging.error(f"Order '{order_id}' not found")
 
-                except Exception as err2:
-                    log(
-                        "ERROR",
-                        SCRIPT,
-                        f"Error when processing event.key() {event.key()}: {err2}",
-                    )
-        abort_script = True
-        if signal_set:
-            signal_handler(signal.SIGTERM, None)
+                    except Exception as err2:
+                        logging.error(
+                            f"Error when processing event.key() {event.key()}: {err2}"
+                        )
 
+                # Manual commit
+                consumer.commit(asynchronous=False)
 
-# Set consumer object
-_, consumer = set_producer_consumer(
-    sys.argv[1],
-    disable_producer=True,
-    consumer_extra_config={
-        "auto.offset.reset": "earliest",
-        "group.id": "pizza_status",
-        "enable.auto.commit": True,
-    },
-)
 
 if __name__ == "__main__":
     # Save PID
     save_pid(SCRIPT)
 
-    # Set signal handlers
-    signal.signal(signal.SIGINT, signal_handler)
-    signal.signal(signal.SIGTERM, signal_handler)
+    # Set consumer object
+    validate_cli_args(SCRIPT)
+    _, consumer = set_producer_consumer(
+        sys.argv[1],
+        disable_producer=True,
+        consumer_extra_config={
+            "group.id": "pizza_status",
+        },
+    )
+
+    # Set signal handler
+    graceful_shutdown = GracefulShutdown(consumer=consumer)
 
     # SQLite
-    with DB(ORDERS_DB, ORDER_TABLE) as db:
-        db.initialise_table()
+    with graceful_shutdown as _:
+        with DB(ORDERS_DB, ORDER_TABLE) as db:
+            db.initialise_table()
+            db.delete_old_orders(hours=2)
 
-    # Start consumer before starting the web app
+    # Start consumer group
     get_pizza_status()

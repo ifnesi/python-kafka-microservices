@@ -19,150 +19,122 @@
 import sys
 import json
 import time
-import signal
+import logging
 
-from utils import set_producer_consumer, delivery_report, get_script_name, log, save_pid
-
-
-# Global variables
-SCRIPT = get_script_name(__file__)
-PRODUCE_TOPIC_BAKED = "pizza-baked"
-PRODUCE_TOPIC_STATUS = "pizza-status"
-CONSUME_TOPICS = ["pizza-assembled"]
-abort_script = True
-signal_set = False
-
-# Set producer/consumer objects
-producer, consumer = set_producer_consumer(
-    sys.argv[1],
-    producer_extra_config={
-        "on_delivery": delivery_report,
-    },
-    consumer_extra_config={
-        "auto.offset.reset": "earliest",
-        "group.id": "pizza_bake",
-        "enable.auto.commit": True,
-    },
+from utils import (
+    GracefulShutdown,
+    log_ini,
+    save_pid,
+    delivery_report,
+    get_script_name,
+    validate_cli_args,
+    set_producer_consumer,
 )
 
 
+# Global variables
+PRODUCE_TOPIC_BAKED = "pizza-baked"
+PRODUCE_TOPIC_STATUS = "pizza-status"
+CONSUME_TOPICS = ["pizza-assembled"]
+SCRIPT = get_script_name(__file__)
+log_ini(SCRIPT)
+graceful_shutdown = None
+producer, consumer = None, None
+
+
 # General functions
-def signal_handler(sig, frame):
-    global signal_set, abort_script
-    if not signal_set:
-        log("INFO", SCRIPT, "Starting graceful shutdown...")
-    if abort_script:
-        log("INFO", SCRIPT, "Graceful shutdown completed")
-        sys.exit(0)
-    signal_set = True
-
-
 def pizza_baked(order_id: str):
-    global signal_set, abort_script
-    abort_script = False
-    # Produce to kafka topic
-    producer.produce(
-        PRODUCE_TOPIC_BAKED,
-        key=order_id,
-    )
-    producer.flush()
-    abort_script = True
-    if signal_set:
-        signal_handler(signal.SIGTERM, None)
+    with graceful_shutdown as _:
+        # Produce to kafka topic
+        producer.produce(
+            PRODUCE_TOPIC_BAKED,
+            key=order_id,
+        )
+        producer.flush()
 
 
 def update_pizza_status(
     order_id: str,
     status: int,
 ):
-    global signal_set, abort_script
-    abort_script = False
-    # Produce to kafka topic
-    producer.produce(
-        PRODUCE_TOPIC_STATUS,
-        key=order_id,
-        value=json.dumps(
-            {
-                "status": status,
-            }
-        ).encode(),
-    )
-    producer.flush()
-    abort_script = True
-    if signal_set:
-        signal_handler(signal.SIGTERM, None)
+    with graceful_shutdown as _:
+        # Produce to kafka topic
+        producer.produce(
+            PRODUCE_TOPIC_STATUS,
+            key=order_id,
+            value=json.dumps(
+                {
+                    "status": status,
+                }
+            ).encode(),
+        )
+        producer.flush()
 
 
 def receive_pizza_assembled():
-    global signal_set, abort_script
     consumer.subscribe(CONSUME_TOPICS)
-    log(
-        "INFO",
-        SCRIPT,
-        f"Subscribed to topic(s): {', '.join(CONSUME_TOPICS)}",
-    )
+    logging.info(f"Subscribed to topic(s): {', '.join(CONSUME_TOPICS)}")
     while True:
-        abort_script = False
-        event = consumer.poll(1.0)
-        if event is not None:
-            if event.error():
-                log(
-                    "ERROR",
-                    SCRIPT,
-                    event.error(),
-                )
-            else:
-                try:
-                    order_id = event.key().decode()
+        with graceful_shutdown as _:
+            event = consumer.poll(0.25)
+            if event is not None:
+                if event.error():
+                    logging.error(event.error())
+                else:
                     try:
-                        cooking_time = json.loads(event.value().decode()).get(
-                            "cooking_time", 0
-                        )
-                    except Exception as err1:
-                        log(
-                            "ERROR",
-                            SCRIPT,
-                            f"Error when processing event.value() {event.value()}: {err1}",
-                        )
-                    else:
-                        # Assemble pizza (blocking point as it is not using asyncio, but that is for demo purposes)
-                        log(
-                            "INFO",
-                            SCRIPT,
-                            f"Preparing order '{order_id}', baking time is {cooking_time} second(s)",
-                        )
-                        time.sleep(cooking_time)
-                        log(
-                            "INFO",
-                            SCRIPT,
-                            f"Order '{order_id}' is baked!",
+                        order_id = event.key().decode()
+                        try:
+                            cooking_time = json.loads(event.value().decode()).get(
+                                "cooking_time", 0
+                            )
+                        except Exception as err1:
+                            logging.error(
+                                f"Error when processing event.value() {event.value()}: {err1}"
+                            )
+                        else:
+                            # Assemble pizza (blocking point as it is not using asyncio, but that is for demo purposes)
+                            logging.info(
+                                f"Preparing order '{order_id}', baking time is {cooking_time} second(s)"
+                            )
+                            time.sleep(cooking_time)
+                            logging.info(f"Order '{order_id}' is baked!")
+
+                            # Update kafka topics
+                            pizza_baked(
+                                order_id,
+                            )
+                            update_pizza_status(
+                                order_id,
+                                300,
+                            )
+
+                    except Exception as err2:
+                        logging.error(
+                            f"Error when processing event.key() {event.key()}: {err2}"
                         )
 
-                        # Update kafka topics
-                        pizza_baked(
-                            order_id,
-                        )
-                        update_pizza_status(
-                            order_id,
-                            300,
-                        )
-                except Exception as err2:
-                    log(
-                        "ERROR",
-                        SCRIPT,
-                        f"Error when processing event.key() {event.key()}: {err2}",
-                    )
-        abort_script = True
-        if signal_set:
-            signal_handler(signal.SIGTERM, None)
+                # Manual commit
+                consumer.commit(asynchronous=False)
 
 
 if __name__ == "__main__":
     # Save PID
     save_pid(SCRIPT)
 
-    # Set signal handlers
-    signal.signal(signal.SIGINT, signal_handler)
-    signal.signal(signal.SIGTERM, signal_handler)
+    # Set producer/consumer objects
+    validate_cli_args(SCRIPT)
+    producer, consumer = set_producer_consumer(
+        sys.argv[1],
+        producer_extra_config={
+            "on_delivery": delivery_report,
+        },
+        consumer_extra_config={
+            "group.id": "pizza_bake",
+        },
+    )
 
+    # Set signal handler
+    graceful_shutdown = GracefulShutdown(consumer=consumer)
+
+    # Start consumer group
     receive_pizza_assembled()
