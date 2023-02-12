@@ -173,6 +173,7 @@ def order_pizza():
 def view_orders():
     """View all orders"""
     with DB(ORDERS_DB, ORDER_TABLE) as db:
+        db.delete_old_orders(hours=2)
         return render_template(
             "view_orders.html",
             title="Orders",
@@ -222,6 +223,7 @@ if __name__ == "__main__":
     # SQLite
     with DB(ORDERS_DB, ORDER_TABLE) as db:
         db.initialise_table()
+        db.delete_old_orders(hours=2)
 
     # Start Flask web app
     app.run(

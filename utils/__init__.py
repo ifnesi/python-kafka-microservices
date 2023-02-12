@@ -139,9 +139,11 @@ class DB:
                 extras TEXT
             )"""
         )
-        # Delete orders older than 1h
+        self.conn.commit()
+
+    def delete_old_orders(self, hours: int = 1):
         self.execute(
-            f"""DELETE FROM orders WHERE timestamp < {int(datetime.datetime.now().timestamp() * 1000) - 60 * 60 * 1000}"""
+            f"""DELETE FROM orders WHERE timestamp < {int(datetime.datetime.now().timestamp() * 1000) - hours * 60 * 60 * 1000}"""
         )
         self.conn.commit()
 
