@@ -37,15 +37,15 @@ Below is a more detailed view of all microservices and to what Kafka topics thei
   - Terminal #3: ```python3 msvc_bake.py {CONFIG_FILE}```
   - Terminal #4: ```python3 msvc_delivery.py {CONFIG_FILE}```
   - Terminal #5: ```python3 webapp.py {CONFIG_FILE}```
-  > Where ```{CONFIG_FILE}``` is a configuration file to be located under the folder ```config``` (see file ```config/example.ini``` for reference):
-    ```
-    [kafka]
-    bootstrap.servers = {{ host:port }}
-    security.protocol = SASL_SSL
-    sasl.mechanisms = PLAIN
-    sasl.username = {{ CLUSTER_API_KEY }}
-    sasl.password = {{ CLUSTER_API_SECRET }}
-    ```
+    - Where ```{CONFIG_FILE}``` is a configuration file to be located under the folder ```config``` (see file ```config/example.ini``` for reference):
+        ```
+        [kafka]
+        bootstrap.servers = {{ host:port }}
+        security.protocol = SASL_SSL
+        sasl.mechanisms = PLAIN
+        sasl.username = {{ CLUSTER_API_KEY }}
+        sasl.password = {{ CLUSTER_API_SECRET }}
+        ```
 - Open your browser and navigate to http://127.0.0.1:8000
 - To stop the demo:
   - To stop all services at once: ```./stop_demo.sh```
