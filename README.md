@@ -1,7 +1,7 @@
-# python-kafka-microservices
-Based on: https://www.confluent.io/en-gb/blog/event-driven-microservices-with-python-and-kafka/
-
 # STILL NOT FINISHED, PENDING TESTS AND DOCS!!!
+
+# python-kafka-microservices
+This is an example of a microservice architecture using the CQRS pattern (Command and Query Responsibility Segregation), and nothing better to explain it by using a reference a pizza delivery service. Who doesn't love pizza? :)
 
 ## Service Flow
 ![image](docs/service_flow.png)
@@ -9,6 +9,33 @@ Based on: https://www.confluent.io/en-gb/blog/event-driven-microservices-with-py
 ## CQRS Architecture using Confluent Cloud (Apache Kafka Cluster)
 ![image](docs/architecture_cqrs.png)
 
+## Installation
+- Python +3.8 required
+- Install python requirements: ```python3 -m pip install venv```
+- Clone this repo: ```git clone git@github.com:ifnesi/python-kafka-microservices.git```
+- Go to the folder where the repo was cloned: ```cd python-kafka-microservices```
+- Create a virtual environment: ```python3 venv _venv```
+- Activate the virtual environment: ```source _venv/bin/activate```
+- Install project requirements: ```python3 -m pip install -f requirements.txt```
+- Deactivate the virtual environment: ```deactivate```
+
+## Running the webapp and microservices
+- Activate the virtual environment: ```source _venv/bin/activate```
+- Start the demo (all in a single terminal): ```./start_demo.sh {CONFIG_FILE}```
+- Alternativelly, open five sheel terminals and start each service on them:
+  - Terminal #1: ```python3 msvc_status.py {CONFIG_FILE}```
+  - Terminal #2: ```python3 msvc_assemble.py {CONFIG_FILE}```
+  - Terminal #3: ```python3 msvc_bake.py {CONFIG_FILE}```
+  - Terminal #4: ```python3 msvc_delivery.py {CONFIG_FILE}```
+  - Terminal #5: ```python3 webapp.py {CONFIG_FILE}```
+- Open your browser and navigate to http://127.0.0.1:8000
+- To stop the demo:
+  - To stop all services at once: ```./stop_demo.sh```
+  - If using the five terminals, press ```[CTRL-C]``` on each one of them
+- Deactivate the virtual environment: ```deactivate```
+
+## Using the webapp
+PENDING!
 
 ## Example of chronology of events:
 Order submitted (webapp):
@@ -83,3 +110,30 @@ Microservice Process Status (started whenever order status is changed by subscri
 (msvc_status) INFO 21:00:12.579 - Subscribed to topic(s): pizza-status
 (msvc_status) INFO 21:01:12.902 - Order '3c91b' status updated: Your pizza was delivered (400)
  ```
+
+## Graceful shutdown
+One very important element of any Kafka consumer is by handling OS signals to be able to perform a graceful shutdown. Any consumer in a consumer group should inform the cluster it is leaving so it can rebalance itself other than wait for a timeout. All microservices used in this project have a graceful shutdown procedure in place, example:
+
+```
+(msvc_status) INFO 21:46:53.338 - Starting graceful shutdown...
+(msvc_status) INFO 21:46:53.338 - Closing consumer group...
+(msvc_status) INFO 21:46:53.372 - Consumer group successfully closed
+(msvc_status) INFO 21:46:53.372 - Graceful shutdown completed
+
+(msvc_assemble) INFO 21:46:54.541 - Starting graceful shutdown...
+(msvc_assemble) INFO 21:46:54.541 - Closing consumer group...
+(msvc_assemble) INFO 21:46:54.577 - Consumer group successfully closed
+(msvc_assemble) INFO 21:46:54.577 - Graceful shutdown completed
+
+(msvc_bake) INFO 21:46:55.968 - Starting graceful shutdown...
+(msvc_bake) INFO 21:46:55.968 - Closing consumer group...
+(msvc_bake) INFO 21:46:55.995 - Consumer group successfully closed
+(msvc_bake) INFO 21:46:55.996 - Graceful shutdown completed
+
+(msvc_delivery) INFO 21:46:57.311 - Starting graceful shutdown...
+(msvc_delivery) INFO 21:46:57.311 - Closing consumer group...
+(msvc_delivery) INFO 21:46:57.341 - Consumer group successfully closed
+(msvc_delivery) INFO 21:46:57.341 - Graceful shutdown completed
+```
+
+ This project wass based on: https://www.confluent.io/en-gb/blog/event-driven-microservices-with-python-and-kafka/
