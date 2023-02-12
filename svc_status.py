@@ -111,8 +111,8 @@ if __name__ == "__main__":
     # SQLite
     with graceful_shutdown as _:
         with DB(ORDERS_DB, ORDER_TABLE) as db:
-            db.initialise_table()
-            db.delete_old_orders(hours=2)
+            db.create_order_table()
+            db.delete_past_timestamp(hours=2)
 
     # Start consumer group
     get_pizza_status()
