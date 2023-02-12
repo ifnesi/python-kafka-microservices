@@ -1,12 +1,20 @@
-# STILL NOT FINISHED, PENDING TESTS AND DOCS!!!
-
 # python-kafka-microservices
-This is an example of a microservice architecture using the CQRS pattern (Command and Query Responsibility Segregation), and nothing better to explain it by using a reference a pizza delivery service. Who doesn't love pizza? :)
+This is an example of a microservice architecture using the CQRS pattern (Command and Query Responsibility Segregation), and nothing better to explain it by using as reference a pizza delivery service. Who doesn't love pizza? :)
 
 ## Service Flow
+The process was made simple to make it easier to explain, basically:
+- Web application (webapp) so users can login to, customise, order and follow up the status of their pizzas
+- Once the pizza is ordered it will go through four microservices (following the same flow of a pizza store):
+  - Assemble the pizza as per order
+  - Bake the pizza
+  - Have it delivered
+  - Process status: Whenever a microprocess completes its activities will communicate with this process so it can update the web application
+- All interprocess communication is via an Apache Kafka Cluster
+
 ![image](docs/service_flow.png)
 
-## CQRS Architecture using Confluent Cloud (Apache Kafka Cluster)
+## General CQRS Architecture
+Below is a more detailed view of all microservices and to what Kafka topics their produce and are subscribed to:
 ![image](docs/architecture_cqrs.png)
 
 ## Installation
