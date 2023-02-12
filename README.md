@@ -3,12 +3,12 @@ This is an example of a microservice architecture using the CQRS pattern (Comman
 
 ## Service Flow
 The process was made simple to make it easier to explain, basically:
-- Web application (webapp) so users can login to, customise, order and follow up the status of their pizzas
+- Web application (```webapp.py```) so users can login to, customise, order and follow up the status of their pizzas
 - Once the pizza is ordered it will go through four microservices (following the same flow of a pizza store):
-  - Assemble the pizza as per order
-  - Bake the pizza
-  - Have it delivered
-  - Process status: Whenever a microprocess completes its activities will communicate with this process so it can update the web application
+  - Assemble the pizza as per order (```msvc_assemble.py```)
+  - Bake the pizza (```msvc_bake.py```)
+  - Have it delivered (```msvc_delivery.py```)
+  - Process status (```msvc_status.py```): Whenever a microprocess completes its activities will communicate with this process so it can update the web application
 - All interprocess communication is via an Apache Kafka Cluster
 
 ![image](docs/service_flow.png)
@@ -37,6 +37,15 @@ Below is a more detailed view of all microservices and to what Kafka topics thei
   - Terminal #3: ```python3 msvc_bake.py {CONFIG_FILE}```
   - Terminal #4: ```python3 msvc_delivery.py {CONFIG_FILE}```
   - Terminal #5: ```python3 webapp.py {CONFIG_FILE}```
+  > Where ```{CONFIG_FILE}``` is a configuration file to be located under the folder ```config``` (see file ```config/example.ini``` for reference):
+    ```
+    [kafka]
+    bootstrap.servers = {{ host:port }}
+    security.protocol = SASL_SSL
+    sasl.mechanisms = PLAIN
+    sasl.username = {{ CLUSTER_API_KEY }}
+    sasl.password = {{ CLUSTER_API_SECRET }}
+    ```
 - Open your browser and navigate to http://127.0.0.1:8000
 - To stop the demo:
   - To stop all services at once: ```./stop_demo.sh```
