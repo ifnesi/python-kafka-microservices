@@ -19,6 +19,7 @@
 import sys
 import json
 import time
+import signal
 import hashlib
 
 from utils import set_producer_consumer, delivery_report, get_script_name, log, save_pid
@@ -29,6 +30,9 @@ SCRIPT = get_script_name(__file__)
 PRODUCE_TOPIC_ASSEMBLED = "pizza-assembled"
 PRODUCE_TOPIC_STATUS = "pizza-status"
 CONSUME_TOPICS = ["pizza-ordered"]
+abort_script = True
+signal_set = False
+
 
 # Set producer/consumer objects
 producer, consumer = set_producer_consumer(
@@ -44,7 +48,20 @@ producer, consumer = set_producer_consumer(
 )
 
 
+# General functions
+def signal_handler(sig, frame):
+    global signal_set, abort_script
+    if not signal_set:
+        log("INFO", SCRIPT, "Starting graceful shutdown...")
+    if abort_script:
+        log("INFO", SCRIPT, "Graceful shutdown completed")
+        sys.exit(0)
+    signal_set = True
+
+
 def pizza_assembled(order_id: str, cooking_time: int):
+    global signal_set, abort_script
+    abort_script = False
     # Produce to kafka topic
     producer.produce(
         PRODUCE_TOPIC_ASSEMBLED,
@@ -56,12 +73,17 @@ def pizza_assembled(order_id: str, cooking_time: int):
         ).encode(),
     )
     producer.flush()
+    abort_script = True
+    if signal_set:
+        signal_handler(signal.SIGTERM, None)
 
 
 def update_pizza_status(
     order_id: str,
     status: int,
 ):
+    global signal_set, abort_script
+    abort_script = False
     # Produce to kafka topic
     producer.produce(
         PRODUCE_TOPIC_STATUS,
@@ -73,9 +95,13 @@ def update_pizza_status(
         ).encode(),
     )
     producer.flush()
+    abort_script = True
+    if signal_set:
+        signal_handler(signal.SIGTERM, None)
 
 
 def receive_orders():
+    global signal_set, abort_script
     consumer.subscribe(CONSUME_TOPICS)
     log(
         "INFO",
@@ -83,6 +109,7 @@ def receive_orders():
         f"Subscribed to topic(s): {', '.join(CONSUME_TOPICS)}",
     )
     while True:
+        abort_script = False
         event = consumer.poll(1.0)
         if event is not None:
             if event.error():
@@ -116,13 +143,13 @@ def receive_orders():
                         log(
                             "INFO",
                             SCRIPT,
-                            f"Preparing order {order_id}, assembling time is {assembling_time} second(s)",
+                            f"Preparing order '{order_id}', assembling time is {assembling_time} second(s)",
                         )
                         time.sleep(assembling_time)
                         log(
                             "INFO",
                             SCRIPT,
-                            f"Order {order_id} is assembled!",
+                            f"Order '{order_id}' is assembled!",
                         )
 
                         # Update kafka topics
@@ -141,10 +168,17 @@ def receive_orders():
                         SCRIPT,
                         f"Error when processing event.key() {event.key()}: {err2}",
                     )
+        abort_script = True
+        if signal_set:
+            signal_handler(signal.SIGTERM, None)
 
 
 if __name__ == "__main__":
     # Save PID
     save_pid(SCRIPT)
+
+    # Set signal handlers
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
 
     receive_orders()

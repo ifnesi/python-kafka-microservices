@@ -19,6 +19,7 @@
 import sys
 import json
 import uuid
+import signal
 import hashlib
 import datetime
 
@@ -26,6 +27,7 @@ from flask import Flask, render_template, request
 
 from utils import (
     DB,
+    log,
     save_pid,
     get_script_name,
     delivery_report,
@@ -38,6 +40,8 @@ SCRIPT = get_script_name(__file__)
 PRODUCE_TOPIC = "pizza-ordered"
 ORDERS_DB = "orders.db"
 ORDER_TABLE = "orders"
+abort_script = True
+signal_set = False
 
 app = Flask(
     __name__,
@@ -47,17 +51,24 @@ app = Flask(
 
 
 # Set producer/consumer objects
-producer, consumer = set_producer_consumer(
+producer, _ = set_producer_consumer(
     sys.argv[1],
     producer_extra_config={
         "on_delivery": delivery_report,
     },
-    consumer_extra_config={
-        "auto.offset.reset": "earliest",
-        "group.id": "pizza_house",
-        "enable.auto.commit": True,
-    },
+    disable_consumer=True,
 )
+
+
+# General functions
+def signal_handler(sig, frame):
+    global signal_set, abort_script
+    if not signal_set:
+        log("INFO", SCRIPT, "Starting graceful shutdown...")
+    if abort_script:
+        log("INFO", SCRIPT, "Graceful shutdown completed")
+        sys.exit(0)
+    signal_set = True
 
 
 # Flask routing
@@ -105,6 +116,9 @@ def view_menu():
 @app.route("/", methods=["POST"])
 def order_pizza():
     """Process pizza order request"""
+    global signal_set, abort_script
+    abort_script = False
+
     # Generate order unique ID
     order_id = uuid.uuid4().hex[-5:]
 
@@ -142,6 +156,9 @@ def order_pizza():
         value=json.dumps(order_details).encode(),
     )
     producer.flush()
+    abort_script = True
+    if signal_set:
+        signal_handler(signal.SIGTERM, None)
 
     return render_template(
         "order_confirmation.html",
@@ -196,6 +213,10 @@ def get_order(order_id):
 if __name__ == "__main__":
     # Save PID
     save_pid(SCRIPT)
+
+    # Set signal handlers
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
 
     # SQLite
     with DB(ORDERS_DB, ORDER_TABLE) as db:

@@ -19,6 +19,7 @@
 import sys
 import json
 import time
+import signal
 
 from utils import set_producer_consumer, delivery_report, get_script_name, log, save_pid
 
@@ -30,6 +31,9 @@ PRODUCE_TOPIC_STATUS = "pizza-status"
 TOPIC_PIZZA_ORDERED = "pizza-ordered"
 TOPIC_PIZZA_BAKED = "pizza-baked"
 CONSUME_TOPICS = [TOPIC_PIZZA_ORDERED, TOPIC_PIZZA_BAKED]
+abort_script = True
+signal_set = False
+
 
 # Set producer/consumer objects
 producer, consumer = set_producer_consumer(
@@ -45,10 +49,23 @@ producer, consumer = set_producer_consumer(
 )
 
 
+# General functions
+def signal_handler(sig, frame):
+    global signal_set, abort_script
+    if not signal_set:
+        log("INFO", SCRIPT, "Starting graceful shutdown...")
+    if abort_script:
+        log("INFO", SCRIPT, "Graceful shutdown completed")
+        sys.exit(0)
+    signal_set = True
+
+
 def update_pizza_status(
     order_id: str,
     status: int,
 ):
+    global signal_set, abort_script
+    abort_script = False
     # Produce to kafka topic
     producer.produce(
         PRODUCE_TOPIC_STATUS,
@@ -60,9 +77,13 @@ def update_pizza_status(
         ).encode(),
     )
     producer.flush()
+    abort_script = True
+    if signal_set:
+        signal_handler(signal.SIGTERM, None)
 
 
 def receive_pizza_baked():
+    global signal_set, abort_script
     consumer.subscribe(CONSUME_TOPICS)
     log(
         "INFO",
@@ -70,6 +91,7 @@ def receive_pizza_baked():
         f"Subscribed to topic(s): {', '.join(CONSUME_TOPICS)}",
     )
     while True:
+        abort_script = False
         event = consumer.poll(1.0)
         if event is not None:
             if event.error():
@@ -89,7 +111,7 @@ def receive_pizza_baked():
                             log(
                                 "INFO",
                                 SCRIPT,
-                                f"Deliverying order {order_id}, delivery time is {delivery_time} second(s)",
+                                f"Deliverying order '{order_id}' for customer_id '{order_ids[order_id]}', delivery time is {delivery_time} second(s)",
                             )
                             time.sleep(delivery_time)
                             log(
@@ -128,10 +150,17 @@ def receive_pizza_baked():
                         SCRIPT,
                         f"Error when processing event.key() {event.key()}: {err2}",
                     )
+        abort_script = True
+        if signal_set:
+            signal_handler(signal.SIGTERM, None)
 
 
 if __name__ == "__main__":
     # Save PID
     save_pid(SCRIPT)
+
+    # Set signal handlers
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
 
     receive_pizza_baked()

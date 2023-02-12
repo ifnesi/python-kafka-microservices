@@ -18,6 +18,7 @@
 
 import sys
 import json
+import signal
 
 from utils import DB, set_producer_consumer, get_script_name, log, save_pid
 
@@ -27,11 +28,24 @@ SCRIPT = get_script_name(__file__)
 CONSUME_TOPICS = ["pizza-status"]
 ORDERS_DB = "orders.db"
 ORDER_TABLE = "orders"
+abort_script = True
+signal_set = False
 
 
 # General functions
+def signal_handler(sig, frame):
+    global signal_set, abort_script
+    if not signal_set:
+        log("INFO", SCRIPT, "Starting graceful shutdown...")
+    if abort_script:
+        log("INFO", SCRIPT, "Graceful shutdown completed")
+        sys.exit(0)
+    signal_set = True
+
+
 def get_pizza_status():
     """Subscribe to pizza-status topic to update in-memory DB (order_ids dict)"""
+    global signal_set, abort_script
     consumer.subscribe(CONSUME_TOPICS)
     log(
         "INFO",
@@ -39,6 +53,7 @@ def get_pizza_status():
         f"Subscribed to topic(s): {', '.join(CONSUME_TOPICS)}",
     )
     while True:
+        abort_script = False
         event = consumer.poll(1.0)
         if event is not None:
             if event.error():
@@ -89,6 +104,9 @@ def get_pizza_status():
                         SCRIPT,
                         f"Error when processing event.key() {event.key()}: {err2}",
                     )
+        abort_script = True
+        if signal_set:
+            signal_handler(signal.SIGTERM, None)
 
 
 # Set producer/consumer objects
@@ -104,6 +122,10 @@ producer, consumer = set_producer_consumer(
 if __name__ == "__main__":
     # Save PID
     save_pid(SCRIPT)
+
+    # Set signal handlers
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
 
     # SQLite
     with DB(ORDERS_DB, ORDER_TABLE) as db:
