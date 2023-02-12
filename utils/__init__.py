@@ -160,7 +160,7 @@ class GracefulShutdown:
                     # Close down consumer to commit final offsets.
                     logging.info("Closing consumer group...")
                     self.consumer.close()
-                    logging.info("Consumer group successfully closed")
+                    logging.info("Consumer in consumer group successfully closed")
                 except Exception as err:
                     logging.error(f"Unable to close consumer group: {err}")
             self.signal_handler(signal.SIGTERM, None)

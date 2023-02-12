@@ -10,6 +10,7 @@ The process was made simple to make it easier to explain, basically:
   - Have it delivered (```msvc_delivery.py```)
   - Process status (```msvc_status.py```): Whenever a microprocess completes its activities will communicate with this process so it can update the web application
 - All interprocess communication is via an Apache Kafka Cluster
+- The implementation of the CQRS pattern requires... (PENDING)
 
 ![image](docs/service_flow.png)
 
@@ -27,6 +28,11 @@ Below is a more detailed view of all microservices and to what Kafka topics thei
 - Activate the virtual environment: ```source _venv/bin/activate```
 - Install project requirements: ```python3 -m pip install -f requirements.txt```
 - Deactivate the virtual environment: ```deactivate```
+- Access your Apache Kafka cluster and create the following topics:
+  - pizza-ordered
+  - pizza-assembled
+  - pizza-baked
+  - pizza-status
 
 ## Running the webapp and microservices
 - Activate the virtual environment: ```source _venv/bin/activate```
@@ -46,6 +52,7 @@ Below is a more detailed view of all microservices and to what Kafka topics thei
         sasl.username = {{ CLUSTER_API_KEY }}
         sasl.password = {{ CLUSTER_API_SECRET }}
         ```
+  - In a real life scenario each microservice (consumer in a consumer group) could be instantiated for as many times as there are partitions to the topic, however that is just for demo purposes only one instance will be spawn
 - Open your browser and navigate to http://127.0.0.1:8000
 - To stop the demo:
   - To stop all services at once: ```./stop_demo.sh```
@@ -135,22 +142,22 @@ One very important element of any Kafka consumer is by handling OS signals to be
 ```
 (msvc_status) INFO 21:46:53.338 - Starting graceful shutdown...
 (msvc_status) INFO 21:46:53.338 - Closing consumer group...
-(msvc_status) INFO 21:46:53.372 - Consumer group successfully closed
+(msvc_status) INFO 21:46:53.372 - Consumer in consumer group successfully closed
 (msvc_status) INFO 21:46:53.372 - Graceful shutdown completed
 
 (msvc_assemble) INFO 21:46:54.541 - Starting graceful shutdown...
 (msvc_assemble) INFO 21:46:54.541 - Closing consumer group...
-(msvc_assemble) INFO 21:46:54.577 - Consumer group successfully closed
+(msvc_assemble) INFO 21:46:54.577 - Consumer in consumer group successfully closed
 (msvc_assemble) INFO 21:46:54.577 - Graceful shutdown completed
 
 (msvc_bake) INFO 21:46:55.968 - Starting graceful shutdown...
 (msvc_bake) INFO 21:46:55.968 - Closing consumer group...
-(msvc_bake) INFO 21:46:55.995 - Consumer group successfully closed
+(msvc_bake) INFO 21:46:55.995 - Consumer in consumer group successfully closed
 (msvc_bake) INFO 21:46:55.996 - Graceful shutdown completed
 
 (msvc_delivery) INFO 21:46:57.311 - Starting graceful shutdown...
 (msvc_delivery) INFO 21:46:57.311 - Closing consumer group...
-(msvc_delivery) INFO 21:46:57.341 - Consumer group successfully closed
+(msvc_delivery) INFO 21:46:57.341 - Consumer in consumer group successfully closed
 (msvc_delivery) INFO 21:46:57.341 - Graceful shutdown completed
 ```
 
