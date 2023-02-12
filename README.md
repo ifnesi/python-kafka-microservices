@@ -16,7 +16,7 @@ The process was made simple to make it easier to explain, basically:
 ## General CQRS Architecture
 Below is a more detailed view of all microservices and to what Kafka topics their produce and are subscribed to:
 
-![image](docs/architecture.png)
+![image](docs/gen_architecture.png)
 
 ## Installation
 - Python +3.8 required
