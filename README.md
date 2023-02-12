@@ -15,7 +15,8 @@ The process was made simple to make it easier to explain, basically:
 
 ## General CQRS Architecture
 Below is a more detailed view of all microservices and to what Kafka topics their produce and are subscribed to:
-![image](docs/architecture_cqrs.png)
+
+![image](docs/architecture.png)
 
 ## Installation
 - Python +3.8 required
@@ -144,4 +145,4 @@ One very important element of any Kafka consumer is by handling OS signals to be
 (msvc_delivery) INFO 21:46:57.341 - Graceful shutdown completed
 ```
 
- This project wass based on: https://www.confluent.io/en-gb/blog/event-driven-microservices-with-python-and-kafka/
+This project wass based on: https://www.confluent.io/en-gb/blog/event-driven-microservices-with-python-and-kafka/
