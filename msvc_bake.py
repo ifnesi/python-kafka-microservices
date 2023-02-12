@@ -84,8 +84,8 @@ def receive_pizza_assembled():
                     try:
                         order_id = event.key().decode()
                         try:
-                            cooking_time = json.loads(event.value().decode()).get(
-                                "cooking_time", 0
+                            baking_time = json.loads(event.value().decode()).get(
+                                "baking_time", 0
                             )
                         except Exception as err1:
                             logging.error(
@@ -94,9 +94,9 @@ def receive_pizza_assembled():
                         else:
                             # Assemble pizza (blocking point as it is not using asyncio, but that is for demo purposes)
                             logging.info(
-                                f"Preparing order '{order_id}', baking time is {cooking_time} second(s)"
+                                f"Preparing order '{order_id}', baking time is {baking_time} second(s)"
                             )
-                            time.sleep(cooking_time)
+                            time.sleep(baking_time)
                             logging.info(f"Order '{order_id}' is baked!")
 
                             # Update kafka topics

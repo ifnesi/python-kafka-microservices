@@ -44,7 +44,7 @@ producer, consumer = None, None
 
 
 # General functions
-def pizza_assembled(order_id: str, cooking_time: int):
+def pizza_assembled(order_id: str, baking_time: int):
     with graceful_shutdown as _:
         # Produce to kafka topic
         producer.produce(
@@ -52,7 +52,7 @@ def pizza_assembled(order_id: str, cooking_time: int):
             key=order_id,
             value=json.dumps(
                 {
-                    "cooking_time": cooking_time,
+                    "baking_time": baking_time,
                 }
             ).encode(),
         )
@@ -113,10 +113,10 @@ def receive_orders():
                             logging.info(f"Order '{order_id}' is assembled!")
 
                             # Update kafka topics
-                            cooking_time = seed % 10 + 10
+                            baking_time = seed % 10 + 10
                             pizza_assembled(
                                 order_id,
-                                cooking_time,
+                                baking_time,
                             )
                             update_pizza_status(
                                 order_id,
