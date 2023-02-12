@@ -31,6 +31,7 @@ def set_producer_consumer(
     config_file: str,
     producer_extra_config: dict = None,
     consumer_extra_config: dict = None,
+    disable_producer: bool = False,
     disable_consumer: bool = False,
 ) -> tuple:
     """Generate producer/config kafka objects"""
@@ -52,12 +53,15 @@ def set_producer_consumer(
     kafka_config = dict(config_parser["kafka"])
 
     # Set producer config
-    producer = Producer(
-        {
-            **kafka_config,
-            **producer_extra_config,
-        }
-    )
+    if not disable_producer:
+        producer = Producer(
+            {
+                **kafka_config,
+                **producer_extra_config,
+            }
+        )
+    else:
+        producer = None
 
     # Set consumer config
     if not disable_consumer:

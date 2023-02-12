@@ -109,9 +109,10 @@ def get_pizza_status():
             signal_handler(signal.SIGTERM, None)
 
 
-# Set producer/consumer objects
-producer, consumer = set_producer_consumer(
+# Set consumer object
+_, consumer = set_producer_consumer(
     sys.argv[1],
+    disable_producer=True,
     consumer_extra_config={
         "auto.offset.reset": "earliest",
         "group.id": "pizza_status",

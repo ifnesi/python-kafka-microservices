@@ -50,7 +50,7 @@ app = Flask(
 )
 
 
-# Set producer/consumer objects
+# Set producer object
 producer, _ = set_producer_consumer(
     sys.argv[1],
     producer_extra_config={
