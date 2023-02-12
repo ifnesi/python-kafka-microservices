@@ -179,16 +179,16 @@ class DB:
 
     def __init__(
         self,
-        orders_db: str,
-        order_table: str,
+        db_name: str,
+        table_name: str,
     ):
-        self.orders_db = orders_db
-        self.order_table = order_table
+        self.db_name = db_name
+        self.table_name = table_name
         self.conn = None
         self.cur = None
 
     def __enter__(self):
-        self.conn = sqlite3.connect(self.orders_db)
+        self.conn = sqlite3.connect(self.db_name)
         self.cur = self.conn.cursor()
         return self
 
@@ -199,9 +199,19 @@ class DB:
             except:
                 pass
 
-    def initialise_table(self):
+    def create_customer_table(self):
         self.execute(
-            f"""CREATE TABLE IF NOT EXISTS {self.order_table} (
+            f"""CREATE TABLE IF NOT EXISTS {self.table_name} (
+                order_id TEXT PRIMARY KEY,
+                timestamp INTEGER,
+                customer_id TEXT
+            )"""
+        )
+        self.conn.commit()
+
+    def create_order_table(self):
+        self.execute(
+            f"""CREATE TABLE IF NOT EXISTS {self.table_name} (
                 order_id TEXT PRIMARY KEY,
                 timestamp INTEGER,
                 name TEXT,
@@ -215,9 +225,9 @@ class DB:
         )
         self.conn.commit()
 
-    def delete_old_orders(self, hours: int = 1):
+    def delete_past_timestamp(self, hours: int = 1):
         self.execute(
-            f"""DELETE FROM orders
+            f"""DELETE FROM {self.table_name}
             WHERE timestamp < {int(datetime.datetime.now().timestamp() * 1000) - hours * 60 * 60 * 1000}"""
         )
         self.conn.commit()
@@ -225,11 +235,22 @@ class DB:
     def execute(self, expression: str):
         return self.cur.execute(expression)
 
+    def get_order_id_customer(
+        self,
+        order_id: str,
+    ) -> dict:
+        self.execute(f"SELECT * FROM {self.table_name} WHERE order_id='{order_id}'")
+        data = self.cur.fetchone()
+        if data is not None:
+            cols = list(map(lambda x: x[0], self.cur.description))
+            data = dict(zip(cols, data))
+        return data
+
     def get_order_id(
         self,
         order_id: str,
     ) -> dict:
-        self.execute(f"SELECT * FROM {self.order_table} WHERE order_id='{order_id}'")
+        self.execute(f"SELECT * FROM {self.table_name} WHERE order_id='{order_id}'")
         data = self.cur.fetchone()
         if data is not None:
             cols = list(map(lambda x: x[0], self.cur.description))
@@ -241,7 +262,7 @@ class DB:
     def get_orders(
         self,
     ) -> dict:
-        self.execute(f"SELECT * FROM {self.order_table} ORDER BY timestamp DESC")
+        self.execute(f"SELECT * FROM {self.table_name} ORDER BY timestamp DESC")
         data = self.cur.fetchall()
         data_all = dict()
         if data:
@@ -270,7 +291,26 @@ class DB:
         status: int,
     ):
         self.execute(
-            f"UPDATE {self.order_table} SET status={status} WHERE order_id='{order_id}'"
+            f"UPDATE {self.table_name} SET status={status} WHERE order_id='{order_id}'"
+        )
+        self.conn.commit()
+
+    def add_customer(
+        self,
+        order_id: str,
+        customer_id: dict,
+    ):
+        self.execute(
+            f"""INSERT INTO {self.table_name} (
+                order_id,
+                timestamp,
+                customer_id
+            )
+            VALUES (
+                '{order_id}',
+                {int(datetime.datetime.now().timestamp() * 1000)},
+                '{customer_id}'
+            )"""
         )
         self.conn.commit()
 
@@ -280,7 +320,7 @@ class DB:
         order_details: dict,
     ):
         self.execute(
-            f"""INSERT INTO {self.order_table} (
+            f"""INSERT INTO {self.table_name} (
                 order_id,
                 timestamp,
                 name,

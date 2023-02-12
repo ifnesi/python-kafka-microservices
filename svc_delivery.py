@@ -22,6 +22,7 @@ import time
 import logging
 
 from utils import (
+    DB,
     GracefulShutdown,
     log_ini,
     save_pid,
@@ -33,11 +34,12 @@ from utils import (
 
 
 # Global variables
-order_ids = dict()
 PRODUCE_TOPIC_STATUS = "pizza-status"
 TOPIC_PIZZA_ORDERED = "pizza-ordered"
 TOPIC_PIZZA_BAKED = "pizza-baked"
 CONSUME_TOPICS = [TOPIC_PIZZA_ORDERED, TOPIC_PIZZA_BAKED]
+CUSTOMER_DB = "customers.db"
+CUSTOMER_TABLE = "customers"
 SCRIPT = get_script_name(__file__)
 log_ini(SCRIPT)
 graceful_shutdown = None
@@ -77,16 +79,42 @@ def receive_pizza_baked():
                         order_id = event.key().decode()
                         topic = event.topic()
 
-                        if topic == TOPIC_PIZZA_BAKED:
-                            if order_id in order_ids.keys():
-                                # Delivery pizza (blocking point as it is not using asyncio, but that is for demo purposes)
-                                delivery_time = int(order_ids[order_id], 16) % 10 + 5
+                        if topic == TOPIC_PIZZA_ORDERED:
+                            # Early warning that a pizza must be delivered once ready
+                            try:
+                                order_details = json.loads(event.value().decode())
+                                order = order_details.get("order", dict())
+                                customer_id = order.get("customer_id", "0000")
+                                # Add to DB order_id <> customer_id
+                                # In a real life scenatio this microservices would have the delivery address of the customer_id
+                                with DB(CUSTOMER_DB, CUSTOMER_TABLE) as db:
+                                    db.add_customer(order_id, customer_id)
                                 logging.info(
-                                    f"Deliverying order '{order_id}' for customer_id '{order_ids[order_id]}', delivery time is {delivery_time} second(s)"
+                                    f"Early warning to deliver order '{order_id}' to customer_id '{customer_id}'"
+                                )
+
+                            except Exception as err1:
+                                logging.error(
+                                    f"Error when processing event.value() {event.value()}: {err1}"
+                                )
+
+                        elif topic == TOPIC_PIZZA_BAKED:
+                            # Pizza ready to be delivered
+                            # Get customer_id (and address in a real life scenario) based on the order_id
+                            with DB(CUSTOMER_DB, CUSTOMER_TABLE) as db:
+                                customer_id = db.get_order_id_customer(order_id)[
+                                    "customer_id"
+                                ]
+
+                            if customer_id is not None:
+                                # Delivery pizza (blocking point as it is not using asyncio, but that is for demo purposes)
+                                delivery_time = int(customer_id, 16) % 10 + 5
+                                logging.info(
+                                    f"Deliverying order '{order_id}' for customer_id '{customer_id}', delivery time is {delivery_time} second(s)"
                                 )
                                 time.sleep(delivery_time)
                                 logging.info(
-                                    f"Order '{order_id}' delivered to customer_id '{order_ids[order_id]}'"
+                                    f"Order '{order_id}' delivered to customer_id '{customer_id}'"
                                 )
 
                                 # Update kafka topics (pizza delivered)
@@ -94,28 +122,15 @@ def receive_pizza_baked():
                                     order_id,
                                     400,
                                 )
+
                             else:
                                 logging.warning(
-                                    f"customer_id '{order_ids[order_id]}' not found (Order '{order_id}')"
+                                    f"customer_id '{customer_id}' not found (Order '{order_id}')"
                                 )
                                 # Update kafka topics (error with order)
                                 update_pizza_status(
                                     order_id,
                                     999,
-                                )
-
-                        elif topic == TOPIC_PIZZA_ORDERED:
-                            try:
-                                order_details = json.loads(event.value().decode())
-                                order = order_details.get("order", dict())
-                                customer_id = order.get("customer_id", "0000")
-                                order_ids[order_id] = customer_id
-                                logging.info(
-                                    f"Early warning to deliver order '{order_id}' to customer_id '{customer_id}'"
-                                )
-                            except Exception as err1:
-                                logging.error(
-                                    f"Error when processing event.value() {event.value()}: {err1}"
                                 )
 
                     except Exception as err2:
@@ -144,6 +159,12 @@ if __name__ == "__main__":
 
     # Set signal handler
     graceful_shutdown = GracefulShutdown(consumer=consumer)
+
+    # SQLite
+    with graceful_shutdown as _:
+        with DB(CUSTOMER_DB, CUSTOMER_TABLE) as db:
+            db.create_customer_table()
+            db.delete_past_timestamp(hours=2)
 
     # Start consumer group
     receive_pizza_baked()

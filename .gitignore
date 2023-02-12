@@ -2,7 +2,7 @@ _venv
 pid
 __pycache__
 *.pyc
-orders.db
+*.db
 
 config/*
 !config/example.ini
