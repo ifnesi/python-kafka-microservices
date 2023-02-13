@@ -35,7 +35,7 @@ def log_ini(
 def validate_cli_args(script: str):
     if len(sys.argv) <= 1:
         logging.error(
-            f"Missing configuration file. Usage: {script}.py {{CONFIGURATION_FILE}} (under the folder 'config/')",
+            f"Missing configuration file. Usage: {script}.py {{CONFIGURATION_FILE}} (under the folder 'config/')\n",
         )
         sys.exit(0)
     else:
