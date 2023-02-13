@@ -25,7 +25,7 @@
             <td><a href="/orders/{{order_id}}">{{order_id}}</a></td>
             <td>{{timestamp}}</td>
             <td>{{name}}</td>
-            <td><span id="order_status">{{status}}</span></td>
+            <td><span class="badge badge-info" id="order_status">{{status}}</span></td>
             {% autoescape false %}
             <td>{{order}}</td>
             {% endautoescape %}
