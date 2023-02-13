@@ -1,5 +1,8 @@
-.nav-link:hover {
-    text-decoration: underline;
+.menu-link:hover {
+    background: #343a40;
+    background-color: #343a40;
+    text-decoration: none;
+    color: white;
 }
 
 .img_border {

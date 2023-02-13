@@ -6,11 +6,11 @@
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/favicon.ico') }}">
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}?v=2">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}?v=2">
-    <script src="{{ url_for('static', filename='js/jquery.min.js') }}?v=2"></script>
-    <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}?v=2"></script>
-    <script src="{{ url_for('static', filename='js/main.js') }}?v=2"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}?v=3">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}?v=3">
+    <script src="{{ url_for('static', filename='js/jquery.min.js') }}?v=3"></script>
+    <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}?v=3"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}?v=3"></script>
     {% block header %}{% endblock %}
 </head>
 
@@ -28,10 +28,12 @@
             <div class="collapse navbar-collapse" id="navbarSupportedContent">
                 <ul class="navbar-nav mr-auto">
                     <li class="nav-item active">
-                        <a class="nav-link" href="/" title="Place your order">View Menu</a>
+                        <a class="btn btn-outline-dark menu-link m-1" href="/" title="Place your order">View
+                            Menu</a>
                     </li>
                     <li class="nav-item active">
-                        <a class="nav-link" href="/orders" title="View all orders">All Orders</a>
+                        <a class="btn btn-outline-dark menu-link m-1" href="/orders" title="View all orders">All
+                            Orders</a>
                     </li>
                 </ul>
                 <div class="form-inline my-2 my-lg-0">
