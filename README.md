@@ -56,7 +56,7 @@ Below is a more detailed view of all microservices and to what Kafka topics thei
 - Activate the virtual environment: ```source _venv/bin/activate```
 - Install project requirements: ```python3 -m pip install -f requirements.txt```
 - Deactivate the virtual environment: ```deactivate```
-- Access your Apache Kafka cluster and create the following topics (with any number of partions, it will not matter for this project):
+- Access your Apache Kafka cluster and create the following topics (with any number of partitions, it will not matter for this project):
   - pizza-ordered
   - pizza-assembled
   - pizza-baked
