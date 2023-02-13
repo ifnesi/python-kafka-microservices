@@ -95,7 +95,7 @@ Should you want to try it out on your own and run it all locally, you will need 
 - Set the ```{CONFIG_FILE}``` as ```localhost.ini```
 - Then, follow the steps on the previous section to get the demo up and running (don't forget to create the topics)
 - To create the topics and see the events on then, go to http://127.0.0.1:9021 (it takes a minute or so once all containers are up)
-- Once done with it stop your docker containers: ```docker-compose down```
+- Once done with it, stop your docker containers: ```docker-compose down```
 
 ### Using the webapp and of chronology of events
 1. After starting all scripts and accessing the landing page (http://127.0.0.1:8000), customise your pizza and submit your order:
