@@ -1,7 +1,7 @@
 {% extends 'root.html' %}
 
 {% block header %}
-<script src="{{ url_for('static', filename='js/ajax_order.js') }}"></script>
+<script src="{{ url_for('static', filename='js/ajax_order.js') }}?v=2"></script>
 {% endblock %}
 
 {% block content %}
@@ -25,7 +25,8 @@
             <td><a href="/orders/{{order_id}}">{{order_id}}</a></td>
             <td>{{timestamp}}</td>
             <td>{{name}}</td>
-            <td><span class="badge badge-info" id="order_status">{{status}}</span></td>
+            <td><span class="badge {% if status == 400 %}badge-success{% else %}badge-info{% endif %}"
+                    id="order_status">{{status_str}}</span></td>
             {% autoescape false %}
             <td>{{order}}</td>
             {% endautoescape %}
