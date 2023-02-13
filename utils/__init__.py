@@ -158,7 +158,7 @@ class GracefulShutdown:
             if self.consumer is not None:
                 try:
                     # Close down consumer to commit final offsets.
-                    logging.info("Closing consumer group...")
+                    logging.info("Closing consumer in consumer group...")
                     self.consumer.close()
                     logging.info("Consumer in consumer group successfully closed")
                 except Exception as err:
