@@ -88,6 +88,15 @@ Below is a more detailed view of all microservices and to what Kafka topics thei
   - If using the five terminals, press ```[CTRL-C]``` on each one of them
 - Deactivate the virtual environment: ```deactivate```
 
+### Running it all locally
+Should you want to try it out on your own and run it all locally, you will need to have Docker installed, then:
+- Run ```docker-compose up -d```
+- Wait until the images are downloaded and the containers are up and running (1x Zookeeper server, 1x Kafka broker, 1x Schema Registry and 1x Confluent Control Center)
+- Set the ```{CONFIG_FILE}``` as ```localhost.ini```
+- Then, follow the steps on the previous section to get the demo up and running (don't forget to create the topics)
+- To create the topics and see the events on then, go to http://127.0.0.1:9021 (it takes a minute or so once all containers are up)
+- Once done with it stop your docker containers: ```docker-compose down```
+
 ### Using the webapp and of chronology of events
 1. After starting all scripts and accessing the landing page (http://127.0.0.1:8000), customise your pizza and submit your order:
 ![image](docs/webapp_menu.png)
