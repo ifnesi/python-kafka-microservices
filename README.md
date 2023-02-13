@@ -28,7 +28,7 @@ By using an event sourcing architecture with Apache Kafka, you can benefit from 
 ## CQRS vs Event Sourcing
 While event sourcing can be used to implement CQRS, it does not necessarily imply event sourcing. In other words, CQRS is focused on the separation of write and read operations, while event sourcing is focused on storing the history of changes to a system as a sequence of events. CQRS and event sourcing can complement each other, but they are not the same thing.
 
-## Pizza Takeway Shop
+## Pizza Takeaway Shop
 
 ### High level view
 This pizza takeaway shop ecosystem was designed using Python and made simple for demo/learning purposes, basically the following are the app/microservices created:
