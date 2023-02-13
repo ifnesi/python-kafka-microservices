@@ -161,7 +161,7 @@ def view_orders():
             )
 
 
-@app.route("/orders/<order_id>", methods=["POST"])
+@app.route("/orders/<order_id>", methods=["PUT"])
 def get_order_ajax(order_id):
     """View order by order_id (AJAX call)"""
     with graceful_shutdown as _:
@@ -190,7 +190,8 @@ def get_order(order_id):
                     timestamp=datetime.datetime.fromtimestamp(
                         order_details["timestamp"] / 1000
                     ).strftime("%Y-%b-%d %H:%M:%S"),
-                    status=order_details["status_str"],
+                    status=order_details["status"],
+                    status_str=order_details["status_str"],
                     name=order_details["name"],
                     order=f"""Sauce: {order_details["sauce"]}<br>
                             Cheese: {order_details["cheese"]}<br>

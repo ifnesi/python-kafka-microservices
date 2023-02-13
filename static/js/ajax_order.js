@@ -1,5 +1,5 @@
 var order_id;
-var last_result;
+var last_result = -1;
 
 $(document).ready(function () {
     order_id = $("#order_id").val();
@@ -17,13 +17,13 @@ function toggle_status(remove, add) {
 function update_order_status() {
     if (order_id) {
         $.ajax({
-            type: "POST",
+            type: "PUT",
             async: true,
             url: "/orders/" + order_id,
             dataType: "json",
             success: function (data) {
                 if (data) {
-                    if (data.status != 400) {
+                    if (last_result != 400) {
                         $("#order_status").text(data.str);
                         setTimeout(function () {
                             update_order_status();
@@ -32,7 +32,7 @@ function update_order_status() {
                     if (data.status == 400) {
                         toggle_status("badge-info", "badge-success");
                     }
-                    else if (last_result != data.status) {
+                    else if (last_result != data.status && last_result != -1) {
                         toggle_status("badge-info", "badge-warning");
                         setTimeout(function () {
                             toggle_status("badge-warning", "badge-info");
