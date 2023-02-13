@@ -188,4 +188,6 @@ One very important element of any Kafka consumer is by handling OS signals to be
 
 Enjoy!
 
-This project was based on: https://www.confluent.io/en-gb/blog/event-driven-microservices-with-python-and-kafka/
+This project was inspired by: https://www.confluent.io/en-gb/blog/event-driven-microservices-with-python-and-kafka/
+
+Check out Confluent's Developer portal (https://developer.confluent.io/), it has free courses, documents, articles, blogs, podcasts and so many more content to get you up and running with a fully managed Apache Kafka service
