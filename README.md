@@ -1,7 +1,7 @@
 # <img src="static/images/logo.png" width="32" /> python-kafka-microservices <img src="static/images/logo.png" width="32" />
 This is an example of a microservice ecosystem using the CQRS (Command and Query Responsibility Segregation) and Event Sourcing patterns, and nothing better to explain that by using as reference a pizza takeaway shop. Who doesn't love a pizza? :blush:
 
-## What is CQRS?
+## What CQRS is?
 CQRS is an architectural pattern that separates the responsibility of executing commands that change data (write operations) from the responsibility of retrieving data (read operations).
 
 In a traditional application, a single model is used for both reading and writing data. However, in a CQRS architecture, separate models are used for each type of operation. This allows for a better segregation of concerns, optimization of read and write performance, more flexibility in handling complex data retrieval and manipulation requirements.
@@ -15,7 +15,7 @@ A lean approach to implement the CQRS patter is by using Apache Kafka as its und
 4. Use a materialized view to store query results: To handle read operations efficiently, you can use a materialized view to store the results of queries. The materialized view can be updated by consuming the events from the command topic and applying them to the data stored in the view. In this project, it will be used a SQLite3 data store
 5. Keep the command and query topics in sync, to ensure that you need to use a mechanism such as event sourcing to keep track of all the changes made to the data. This allows you to maintain a consistent view of the data and ensure that the query results are up-to-date
 
-## What is the Event Sourcing pattern?
+## What Event Sourcing is?
 Event sourcing is an architectural pattern that involves storing the history of changes to a system as a sequence of events, rather than just storing the current state, or worse destroying previous states, of the system. Apache Kafka is a popular open-source platform that can be used to implement an event sourcing architecture. Here's an overview of how you can implement an event sourcing architecture using Apache Kafka:
 1. Store events in a topic. Each event should represent a change to the state of the system, such as the creation, update, or deletion of an entity
 2. Use producers to append events to the topic. These producers can be triggered by user actions or system events
