@@ -25,9 +25,11 @@ from utils import (
     GracefulShutdown,
     log_ini,
     save_pid,
+    log_exception,
     delivery_report,
     get_script_name,
     validate_cli_args,
+    log_event_received,
     set_producer_consumer,
 )
 
@@ -82,14 +84,17 @@ def receive_pizza_assembled():
                     logging.error(event.error())
                 else:
                     try:
+                        log_event_received(event)
+
                         order_id = event.key().decode()
                         try:
                             baking_time = json.loads(event.value().decode()).get(
                                 "baking_time", 0
                             )
-                        except Exception as err1:
-                            logging.error(
-                                f"Error when processing event.value() {event.value()}: {err1}"
+                        except Exception:
+                            log_exception(
+                                f"Error when processing event.value() {event.value()}",
+                                sys.exc_info(),
                             )
                         else:
                             # Assemble pizza (blocking point as it is not using asyncio, but that is for demo purposes)
@@ -108,9 +113,10 @@ def receive_pizza_assembled():
                                 300,
                             )
 
-                    except Exception as err2:
-                        logging.error(
-                            f"Error when processing event.key() {event.key()}: {err2}"
+                    except Exception:
+                        log_exception(
+                            f"Error when processing event.key() {event.key()}",
+                            sys.exc_info(),
                         )
 
                 # Manual commit

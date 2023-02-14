@@ -26,9 +26,11 @@ from utils import (
     GracefulShutdown,
     log_ini,
     save_pid,
+    log_exception,
     get_script_name,
     validate_cli_args,
     get_string_status,
+    log_event_received,
     set_producer_consumer,
 )
 
@@ -56,6 +58,8 @@ def get_pizza_status():
                     logging.error(event.error())
                 else:
                     try:
+                        log_event_received(event)
+
                         order_id = event.key().decode()
                         with DB(ORDERS_DB, ORDER_TABLE) as db:
                             order_data = db.get_order_id(
@@ -65,11 +69,12 @@ def get_pizza_status():
                                 try:
                                     pizza_status = json.loads(
                                         event.value().decode()
-                                    ).get("status", -1)
-                                except Exception as err1:
+                                    ).get("status", -200)
+                                except Exception:
                                     pizza_status = -999
-                                    logging.error(
-                                        f"Error when processing event.value() {event.value()}: {err1}"
+                                    log_exception(
+                                        f"Error when processing event.value() {event.value()}",
+                                        sys.exc_info(),
                                     )
                                 finally:
                                     logging.info(
@@ -82,9 +87,10 @@ def get_pizza_status():
                             else:
                                 logging.error(f"Order '{order_id}' not found")
 
-                    except Exception as err2:
-                        logging.error(
-                            f"Error when processing event.key() {event.key()}: {err2}"
+                    except Exception:
+                        log_exception(
+                            f"Error when processing event.key() {event.key()}",
+                            sys.exc_info(),
                         )
 
                 # Manual commit
