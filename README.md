@@ -174,6 +174,7 @@ Should you want to try it out on your own and run it all locally, you will need 
 Have you noticed the microservice **Deliver Pizza** is stateful as it has two steps?
 - Step 1/2: Receive early warning that an order was placed (topic ```pizza-ordered```)
 - Step 2/2: Receive notification the pizza is baked (topic ```pizza-baked```)
+
 As that microservice is subscribed to two different topics, Apache Kafka cannot guarantee the order of events for the same event key. Hang on, but won't the early notification always arrive before the notification the pizza is baked (see the architecture diagram above)? The answer to that is: usually yes, as the first step happens before the second one, however what if for some reason the microservice **Deliver Pizza** is down and a bunch of events get pushed through the topics? When the microservice is brought up it will consume the events from the two topics and not necessarily in the same chronological order (for the same event key). For that reason microservice like that needs to take into account this kind of situations. On this project, if that happens the customer would first get the status "Bear with us we are checking your order, it won’t take long" (once the pizza is baked notification is processed), then would get the status "Your pizza was delivered" (once the early warning notification is processed).
 
 #### **IMPORTANT 2**
