@@ -11,12 +11,13 @@ from confluent_kafka import Producer, Consumer
 
 # Global variables
 ORDER_STATUSES = {
-    -1: "Oops! Unknown order",
+    -999: "Oops! Something went wrong, we will refund your order",
+    -200: "Oops! Unknown order",
+    -100: "Bear with us we are checking your order, it won't take long",
     100: "Order received and being prepared",
     200: "Your pizza is in the oven",
     300: "Your pizza is out for delivery",
     400: "Your pizza was delivered",
-    -999: "Oops! Invalid order",
 }
 
 
@@ -30,6 +31,18 @@ def log_ini(
         level=level,
         datefmt="%H:%M:%S",
     )
+
+
+def log_event_received(event) -> None:
+    logging.info(
+        f"""Event received from topic '{event.topic()},' key {event.key()}, value {event.value()}"""
+    )
+
+
+def log_exception(message: str, sys_exc_info) -> None:
+    exc_type, exc_obj, exc_tb = sys.exc_info()
+    fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+    logging.critical(f"{message}: [{exc_type} | {fname}@{exc_tb.tb_lineno}] {exc_obj}")
 
 
 def validate_cli_args(script: str):
@@ -161,8 +174,11 @@ class GracefulShutdown:
                     logging.info("Closing consumer in consumer group...")
                     self.consumer.close()
                     logging.info("Consumer in consumer group successfully closed")
-                except Exception as err:
-                    logging.error(f"Unable to close consumer group: {err}")
+                except Exception:
+                    log_exception(
+                        "Unable to close consumer group",
+                        sys.exc_info(),
+                    )
             self.signal_handler(signal.SIGTERM, None)
 
     def signal_handler(self, sig, frame):
@@ -291,7 +307,24 @@ class DB:
         status: int,
     ):
         self.execute(
-            f"UPDATE {self.table_name} SET status={status} WHERE order_id='{order_id}'"
+            f"""UPDATE {self.table_name} SET
+                    status={status}
+                WHERE order_id='{order_id}'
+            """
+        )
+        self.conn.commit()
+
+    def update_customer(
+        self,
+        order_id: str,
+        customer_id: dict,
+    ):
+        self.execute(
+            f"""UPDATE {self.table_name} SET
+                    timestamp={int(datetime.datetime.now().timestamp() * 1000)},
+                    customer_id='{customer_id}'
+                WHERE order_id='{order_id}'
+            """
         )
         self.conn.commit()
 
