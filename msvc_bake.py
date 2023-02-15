@@ -30,38 +30,63 @@ from utils import (
     get_script_name,
     validate_cli_args,
     log_event_received,
+    get_system_config,
     set_producer_consumer,
 )
 
 
-# Global variables
-PRODUCE_TOPIC_BAKED = "pizza-baked"
-PRODUCE_TOPIC_STATUS = "pizza-status"
-CONSUME_TOPICS = ["pizza-assembled"]
+####################
+# Global variables #
+####################
 SCRIPT = get_script_name(__file__)
 log_ini(SCRIPT)
-graceful_shutdown = None
-producer, consumer = None, None
+
+# Validate command arguments
+validate_cli_args(SCRIPT)
+
+# Get system config file
+SYS_CONFIG = get_system_config(sys.argv[2])
+PRODUCE_TOPIC_STATUS = SYS_CONFIG["kafka-topics"]["pizza_status"]
+PRODUCE_TOPIC_BAKED = SYS_CONFIG["kafka-topics"]["pizza_baked"]
+CONSUME_TOPICS = [
+    SYS_CONFIG["kafka-topics"]["pizza_assembled"],
+]
+
+# Set producer/consumer objects
+PRODUCER, CONSUMER = set_producer_consumer(
+    sys.argv[1],
+    producer_extra_config={
+        "on_delivery": delivery_report,
+    },
+    consumer_extra_config={
+        "group.id": SYS_CONFIG["kafka-consumer-id"]["microservice_baked"],
+    },
+)
+
+# Set signal handler
+GRACEFUL_SHUTDOWN = GracefulShutdown(consumer=CONSUMER)
 
 
-# General functions
+#####################
+# General functions #
+#####################
 def pizza_baked(order_id: str):
-    with graceful_shutdown as _:
+    with GRACEFUL_SHUTDOWN as _:
         # Produce to kafka topic
-        producer.produce(
+        PRODUCER.produce(
             PRODUCE_TOPIC_BAKED,
             key=order_id,
         )
-        producer.flush()
+        PRODUCER.flush()
 
 
 def update_pizza_status(
     order_id: str,
     status: int,
 ):
-    with graceful_shutdown as _:
+    with GRACEFUL_SHUTDOWN as _:
         # Produce to kafka topic
-        producer.produce(
+        PRODUCER.produce(
             PRODUCE_TOPIC_STATUS,
             key=order_id,
             value=json.dumps(
@@ -70,15 +95,15 @@ def update_pizza_status(
                 }
             ).encode(),
         )
-        producer.flush()
+        PRODUCER.flush()
 
 
 def receive_pizza_assembled():
-    consumer.subscribe(CONSUME_TOPICS)
+    CONSUMER.subscribe(CONSUME_TOPICS)
     logging.info(f"Subscribed to topic(s): {', '.join(CONSUME_TOPICS)}")
     while True:
-        with graceful_shutdown as _:
-            event = consumer.poll(0.25)
+        with GRACEFUL_SHUTDOWN as _:
+            event = CONSUMER.poll(0.25)
             if event is not None:
                 if event.error():
                     logging.error(event.error())
@@ -120,27 +145,15 @@ def receive_pizza_assembled():
                         )
 
                 # Manual commit
-                consumer.commit(asynchronous=False)
+                CONSUMER.commit(asynchronous=False)
 
 
+########
+# Main #
+########
 if __name__ == "__main__":
     # Save PID
     save_pid(SCRIPT)
 
-    # Set producer/consumer objects
-    validate_cli_args(SCRIPT)
-    producer, consumer = set_producer_consumer(
-        sys.argv[1],
-        producer_extra_config={
-            "on_delivery": delivery_report,
-        },
-        consumer_extra_config={
-            "group.id": "pizza_bake",
-        },
-    )
-
-    # Set signal handler
-    graceful_shutdown = GracefulShutdown(consumer=consumer)
-
-    # Start consumer group
+    # Start consumer
     receive_pizza_assembled()

@@ -31,28 +31,57 @@ from utils import (
     validate_cli_args,
     get_string_status,
     log_event_received,
+    get_system_config,
     set_producer_consumer,
 )
 
 
-# Global variables
-CONSUME_TOPICS = ["pizza-status"]
-ORDERS_DB = "orders.db"
-ORDER_TABLE = "orders"
+####################
+# Global variables #
+####################
 SCRIPT = get_script_name(__file__)
 log_ini(SCRIPT)
-graceful_shutdown = None
-consumer = None
+
+# Validate command arguments
+validate_cli_args(SCRIPT)
+
+# Get system config file
+SYS_CONFIG = get_system_config(sys.argv[2])
+CONSUME_TOPICS = [
+    SYS_CONFIG["kafka-topics"]["pizza_status"],
+]
+
+# Set consumer object
+_, CONSUMER = set_producer_consumer(
+    sys.argv[1],
+    disable_producer=True,
+    consumer_extra_config={
+        "group.id": SYS_CONFIG["kafka-consumer-id"]["microservice_status"],
+    },
+)
+
+# Set signal handler
+GRACEFUL_SHUTDOWN = GracefulShutdown(consumer=CONSUMER)
+
+# SQLite
+ORDERS_DB = SYS_CONFIG["sqlite-orders"]["db"]
+ORDER_TABLE = SYS_CONFIG["sqlite-orders"]["table"]
+with GRACEFUL_SHUTDOWN as _:
+    with DB(ORDERS_DB, ORDER_TABLE) as db:
+        db.create_order_table()
+        db.delete_past_timestamp(hours=2)
 
 
-# General functions
+#####################
+# General functions #
+#####################
 def get_pizza_status():
     """Subscribe to pizza-status topic to update in-memory DB (order_ids dict)"""
-    consumer.subscribe(CONSUME_TOPICS)
+    CONSUMER.subscribe(CONSUME_TOPICS)
     logging.info(f"Subscribed to topic(s): {', '.join(CONSUME_TOPICS)}")
     while True:
-        with graceful_shutdown as _:
-            event = consumer.poll(0.25)
+        with GRACEFUL_SHUTDOWN as _:
+            event = CONSUMER.poll(0.25)
             if event is not None:
                 if event.error():
                     logging.error(event.error())
@@ -94,31 +123,15 @@ def get_pizza_status():
                         )
 
                 # Manual commit
-                consumer.commit(asynchronous=False)
+                CONSUMER.commit(asynchronous=False)
 
 
+########
+# Main #
+########
 if __name__ == "__main__":
     # Save PID
     save_pid(SCRIPT)
 
-    # Set consumer object
-    validate_cli_args(SCRIPT)
-    _, consumer = set_producer_consumer(
-        sys.argv[1],
-        disable_producer=True,
-        consumer_extra_config={
-            "group.id": "pizza_status",
-        },
-    )
-
-    # Set signal handler
-    graceful_shutdown = GracefulShutdown(consumer=consumer)
-
-    # SQLite
-    with graceful_shutdown as _:
-        with DB(ORDERS_DB, ORDER_TABLE) as db:
-            db.create_order_table()
-            db.delete_past_timestamp(hours=2)
-
-    # Start consumer group
+    # Start consumer
     get_pizza_status()

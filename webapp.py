@@ -23,7 +23,7 @@ import hashlib
 import logging
 import datetime
 
-from flask import Flask, render_template, jsonify, request
+from flask import Flask, render_template, request
 
 from utils import (
     DB,
@@ -33,19 +33,45 @@ from utils import (
     get_script_name,
     delivery_report,
     validate_cli_args,
+    get_system_config,
     set_producer_consumer,
 )
 
 
-# Global variables
-PRODUCE_TOPIC = "pizza-ordered"
-ORDERS_DB = "orders.db"
-ORDER_TABLE = "orders"
+####################
+# Global variables #
+####################
 SCRIPT = get_script_name(__file__)
 log_ini(SCRIPT)
-graceful_shutdown = None
-producer = None
 
+# Validate command arguments
+validate_cli_args(SCRIPT)
+
+# Get system config file
+SYS_CONFIG = get_system_config(sys.argv[2])
+PRODUCE_TOPIC = SYS_CONFIG["kafka-topics"]["pizza_ordered"]
+
+# Set producer object
+PRODUCER, _ = set_producer_consumer(
+    sys.argv[1],
+    producer_extra_config={
+        "on_delivery": delivery_report,
+    },
+    disable_consumer=True,
+)
+
+# Set signal handler
+GRACEFUL_SHUTDOWN = GracefulShutdown()
+
+# SQLite
+ORDERS_DB = SYS_CONFIG["sqlite-orders"]["db"]
+ORDER_TABLE = SYS_CONFIG["sqlite-orders"]["table"]
+with GRACEFUL_SHUTDOWN as _:
+    with DB(ORDERS_DB, ORDER_TABLE) as db:
+        db.create_order_table()
+        db.delete_past_timestamp(hours=2)
+
+# Webapp (Flask)
 app = Flask(
     __name__,
     static_folder="static",
@@ -55,52 +81,26 @@ log = logging.getLogger("werkzeug")
 log.setLevel(logging.WARNING)
 
 
-# Flask routing
+#################
+# Flask routing #
+#################
 @app.route("/", methods=["GET"])
 def view_menu():
     """View menu to order a pizza"""
     return render_template(
         "menu.html",
         title="Menu",
-        sauces=[
-            "Tomato",
-            "Organic tomato",
-            "Pesto",
-            "Marinara",
-            "Buffalo",
-            "Hummus",
-        ],
-        cheeses=[
-            "Mozzarella",
-            "Provolone",
-            "Cheddar",
-            "Ricotta",
-            "Gouda",
-            "Gruyere",
-        ],
-        main_toppings=[
-            "Pepperoni",
-            "Sausage",
-            "Chicken",
-            "Pork",
-            "Minced meat",
-            "Vegan meat",
-        ],
-        extra_toppings=[
-            "Mushroom",
-            "Onion",
-            "Eggs",
-            "Black olives",
-            "Green pepper",
-            "Fresh garlic",
-        ],
+        sauces=SYS_CONFIG["pizza"]["sauce"],
+        cheeses=SYS_CONFIG["pizza"]["cheese"],
+        main_toppings=SYS_CONFIG["pizza"]["main_topping"],
+        extra_toppings=SYS_CONFIG["pizza"]["extra_toppings"],
     )
 
 
 @app.route("/", methods=["POST"])
 def order_pizza():
     """Process pizza order request"""
-    with graceful_shutdown as _:
+    with GRACEFUL_SHUTDOWN as _:
         # Generate order unique ID
         order_id = uuid.uuid4().hex[-5:]
 
@@ -132,12 +132,12 @@ def order_pizza():
             )
 
         # Produce to kafka topic
-        producer.produce(
+        PRODUCER.produce(
             PRODUCE_TOPIC,
             key=order_id,
             value=json.dumps(order_details).encode(),
         )
-        producer.flush()
+        PRODUCER.flush()
 
         return render_template(
             "order_confirmation.html",
@@ -151,7 +151,7 @@ def order_pizza():
 @app.route("/orders", methods=["GET"])
 def view_orders():
     """View all orders"""
-    with graceful_shutdown as _:
+    with GRACEFUL_SHUTDOWN as _:
         with DB(ORDERS_DB, ORDER_TABLE) as db:
             db.delete_past_timestamp(hours=2)
             return render_template(
@@ -164,7 +164,7 @@ def view_orders():
 @app.route("/orders/<order_id>", methods=["PUT"])
 def get_order_ajax(order_id):
     """View order by order_id (AJAX call)"""
-    with graceful_shutdown as _:
+    with GRACEFUL_SHUTDOWN as _:
         with DB(ORDERS_DB, ORDER_TABLE) as db:
             order_details = db.get_order_id(order_id)
             if order_details is not None:
@@ -178,7 +178,7 @@ def get_order_ajax(order_id):
 @app.route("/orders/<order_id>", methods=["GET"])
 def get_order(order_id):
     """View order by order_id"""
-    with graceful_shutdown as _:
+    with GRACEFUL_SHUTDOWN as _:
         with DB(ORDERS_DB, ORDER_TABLE) as db:
             order_details = db.get_order_id(order_id)
             if order_details is not None:
@@ -208,28 +208,12 @@ def get_order(order_id):
                 )
 
 
+########
+# Main #
+########
 if __name__ == "__main__":
     # Save PID
     save_pid(SCRIPT)
-
-    # Set producer object
-    validate_cli_args(SCRIPT)
-    producer, _ = set_producer_consumer(
-        sys.argv[1],
-        producer_extra_config={
-            "on_delivery": delivery_report,
-        },
-        disable_consumer=True,
-    )
-
-    # Set signal handler
-    graceful_shutdown = GracefulShutdown()
-
-    # SQLite
-    with graceful_shutdown as _:
-        with DB(ORDERS_DB, ORDER_TABLE) as db:
-            db.create_order_table()
-            db.delete_past_timestamp(hours=2)
 
     # Start Flask web app
     app.run(
