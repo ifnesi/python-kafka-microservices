@@ -67,7 +67,11 @@ GRACEFUL_SHUTDOWN = GracefulShutdown()
 ORDERS_DB = SYS_CONFIG["sqlite-orders"]["db"]
 ORDER_TABLE = SYS_CONFIG["sqlite-orders"]["table"]
 with GRACEFUL_SHUTDOWN as _:
-    with DB(ORDERS_DB, ORDER_TABLE) as db:
+    with DB(
+        ORDERS_DB,
+        ORDER_TABLE,
+        statuses=SYS_CONFIG["status"],
+    ) as db:
         db.create_order_table()
         db.delete_past_timestamp(hours=2)
 
@@ -125,7 +129,11 @@ def order_pizza():
         }
 
         # Add order to DB
-        with DB(ORDERS_DB, ORDER_TABLE) as db:
+        with DB(
+            ORDERS_DB,
+            ORDER_TABLE,
+            statuses=SYS_CONFIG["status"],
+        ) as db:
             db.add_order(
                 order_id,
                 order_details,
@@ -152,7 +160,11 @@ def order_pizza():
 def view_orders():
     """View all orders"""
     with GRACEFUL_SHUTDOWN as _:
-        with DB(ORDERS_DB, ORDER_TABLE) as db:
+        with DB(
+            ORDERS_DB,
+            ORDER_TABLE,
+            statuses=SYS_CONFIG["status"],
+        ) as db:
             db.delete_past_timestamp(hours=2)
             return render_template(
                 "view_orders.html",
@@ -165,7 +177,11 @@ def view_orders():
 def get_order_ajax(order_id):
     """View order by order_id (AJAX call)"""
     with GRACEFUL_SHUTDOWN as _:
-        with DB(ORDERS_DB, ORDER_TABLE) as db:
+        with DB(
+            ORDERS_DB,
+            ORDER_TABLE,
+            statuses=SYS_CONFIG["status"],
+        ) as db:
             order_details = db.get_order_id(order_id)
             if order_details is not None:
                 return {
@@ -179,7 +195,11 @@ def get_order_ajax(order_id):
 def get_order(order_id):
     """View order by order_id"""
     with GRACEFUL_SHUTDOWN as _:
-        with DB(ORDERS_DB, ORDER_TABLE) as db:
+        with DB(
+            ORDERS_DB,
+            ORDER_TABLE,
+            statuses=SYS_CONFIG["status"],
+        ) as db:
             order_details = db.get_order_id(order_id)
             if order_details is not None:
                 # Order exists

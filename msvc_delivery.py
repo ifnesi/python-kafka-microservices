@@ -61,7 +61,7 @@ PRODUCER, CONSUMER = set_producer_consumer(
         "on_delivery": delivery_report,
     },
     consumer_extra_config={
-        "group.id": SYS_CONFIG["kafka-consumer-id"]["microservice_delivery"],
+        "group.id": SYS_CONFIG["kafka-consumer-group-id"]["microservice_delivery"],
     },
 )
 
@@ -72,7 +72,11 @@ GRACEFUL_SHUTDOWN = GracefulShutdown(consumer=CONSUMER)
 CUSTOMER_DB = SYS_CONFIG["sqlite-customers"]["db"]
 CUSTOMER_TABLE = SYS_CONFIG["sqlite-customers"]["table"]
 with GRACEFUL_SHUTDOWN as _:
-    with DB(CUSTOMER_DB, CUSTOMER_TABLE) as db:
+    with DB(
+        CUSTOMER_DB,
+        CUSTOMER_TABLE,
+        statuses=SYS_CONFIG["status"],
+    ) as db:
         db.create_customer_table()
         db.delete_past_timestamp(hours=2)
 
@@ -141,7 +145,11 @@ def receive_pizza_baked():
 
                                 # Check if it is a pending order, that happens when the early notification (for some reason) arrives after the notification the pizza is baked
                                 is_pending = False
-                                with DB(CUSTOMER_DB, CUSTOMER_TABLE) as db:
+                                with DB(
+                                    CUSTOMER_DB,
+                                    CUSTOMER_TABLE,
+                                    statuses=SYS_CONFIG["status"],
+                                ) as db:
                                     check_order = db.get_order_id_customer(order_id)
                                     if check_order is not None:
                                         if check_order["customer_id"] == PENDING_ORDER:
@@ -149,7 +157,11 @@ def receive_pizza_baked():
 
                                 if is_pending:
                                     # Update customer_id for the order_id
-                                    with DB(CUSTOMER_DB, CUSTOMER_TABLE) as db:
+                                    with DB(
+                                        CUSTOMER_DB,
+                                        CUSTOMER_TABLE,
+                                        statuses=SYS_CONFIG["status"],
+                                    ) as db:
                                         db.update_customer(order_id, customer_id)
                                         deliver_pizza(
                                             order_id,
@@ -159,7 +171,11 @@ def receive_pizza_baked():
 
                                 else:
                                     # In a real life scenario this microservices would have the delivery address of the customer_id
-                                    with DB(CUSTOMER_DB, CUSTOMER_TABLE) as db:
+                                    with DB(
+                                        CUSTOMER_DB,
+                                        CUSTOMER_TABLE,
+                                        statuses=SYS_CONFIG["status"],
+                                    ) as db:
                                         db.add_customer(order_id, customer_id)
 
                                     logging.info(
@@ -175,7 +191,11 @@ def receive_pizza_baked():
                         elif topic == TOPIC_PIZZA_BAKED:
                             # Pizza ready to be delivered
                             # Get customer_id (and address in a real life scenario) based on the order_id
-                            with DB(CUSTOMER_DB, CUSTOMER_TABLE) as db:
+                            with DB(
+                                CUSTOMER_DB,
+                                CUSTOMER_TABLE,
+                                statuses=SYS_CONFIG["status"],
+                            ) as db:
                                 customer_id = db.get_order_id_customer(order_id)
 
                             if customer_id is not None:
@@ -195,7 +215,11 @@ def receive_pizza_baked():
                                     -100,
                                 )
                                 # Add order_id to the DB as "pending", that happens when the early notification (for some reason) arrives after the notification the pizza is baked
-                                with DB(CUSTOMER_DB, CUSTOMER_TABLE) as db:
+                                with DB(
+                                    CUSTOMER_DB,
+                                    CUSTOMER_TABLE,
+                                    statuses=SYS_CONFIG["status"],
+                                ) as db:
                                     db.add_customer(order_id, PENDING_ORDER)
 
                     except Exception:

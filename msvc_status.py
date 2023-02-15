@@ -56,7 +56,7 @@ _, CONSUMER = set_producer_consumer(
     sys.argv[1],
     disable_producer=True,
     consumer_extra_config={
-        "group.id": SYS_CONFIG["kafka-consumer-id"]["microservice_status"],
+        "group.id": SYS_CONFIG["kafka-consumer-group-id"]["microservice_status"],
     },
 )
 
@@ -67,7 +67,11 @@ GRACEFUL_SHUTDOWN = GracefulShutdown(consumer=CONSUMER)
 ORDERS_DB = SYS_CONFIG["sqlite-orders"]["db"]
 ORDER_TABLE = SYS_CONFIG["sqlite-orders"]["table"]
 with GRACEFUL_SHUTDOWN as _:
-    with DB(ORDERS_DB, ORDER_TABLE) as db:
+    with DB(
+        ORDERS_DB,
+        ORDER_TABLE,
+        statuses=SYS_CONFIG["status"],
+    ) as db:
         db.create_order_table()
         db.delete_past_timestamp(hours=2)
 
@@ -90,7 +94,11 @@ def get_pizza_status():
                         log_event_received(event)
 
                         order_id = event.key().decode()
-                        with DB(ORDERS_DB, ORDER_TABLE) as db:
+                        with DB(
+                            ORDERS_DB,
+                            ORDER_TABLE,
+                            statuses=SYS_CONFIG["status"],
+                        ) as db:
                             order_data = db.get_order_id(
                                 order_id,
                             )
@@ -107,7 +115,7 @@ def get_pizza_status():
                                     )
                                 finally:
                                     logging.info(
-                                        f"Order '{order_id}' status updated: {get_string_status(pizza_status)} ({pizza_status})"
+                                        f"""Order '{order_id}' status updated: {get_string_status(SYS_CONFIG["status"], pizza_status)} ({pizza_status})"""
                                     )
                                     db.update_order_status(
                                         order_id,

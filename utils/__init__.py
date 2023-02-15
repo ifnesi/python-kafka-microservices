@@ -25,18 +25,6 @@ from configparser import ConfigParser
 from confluent_kafka import Producer, Consumer
 
 
-# Global variables
-ORDER_STATUSES = {
-    -999: "Oops! Something went wrong, we will refund your order",
-    -200: "Oops! Unknown order",
-    -100: "Bear with us we are checking your order, it won't take long",
-    100: "Order received and being prepared",
-    200: "Your pizza is in the oven",
-    300: "Your pizza is out for delivery",
-    400: "Your pizza was delivered",
-}
-
-
 # Generic functions
 def get_system_config(
     config_file: str = "default.ini",
@@ -62,8 +50,10 @@ def get_system_config(
         for s in ("sauce", "cheese", "main_topping", "extra_toppings"):
             sys_config["pizza"][s] = parse_list(sys_config["pizza"][s])
 
-        # Parse order status
-        sys_config["status"] = dict()
+        # Parse order statuses
+        sys_config["status"] = {
+            None: sys_config["status-label"]["else"],
+        }
         for k, v in sys_config["statuses"].items():
             sys_config["status"][int(v)] = sys_config["status-label"][k]
         sys_config.pop("statuses")
@@ -142,10 +132,10 @@ def get_script_name(file: str) -> str:
     return os.path.splitext(os.path.basename(file))[0]
 
 
-def get_string_status(status: int) -> str:
-    return ORDER_STATUSES.get(
+def get_string_status(statuses: dict, status: int) -> str:
+    return statuses.get(
         status,
-        f"Oops! Unknown status ({status})",
+        f"""{statuses.get(None, "Oops! Unknown status")} ({status})""",
     )
 
 
@@ -268,9 +258,11 @@ class DB:
         self,
         db_name: str,
         table_name: str,
+        statuses: dict = None,
     ):
         self.db_name = db_name
         self.table_name = table_name
+        self.statuses = statuses
         self.conn = None
         self.cur = None
 
@@ -343,7 +335,7 @@ class DB:
             cols = list(map(lambda x: x[0], self.cur.description))
             data = dict(zip(cols, data))
             data["extras"] = ", ".join(data["extras"].split(","))
-            data["status_str"] = get_string_status(data["status"])
+            data["status_str"] = get_string_status(self.statuses, data["status"])
         return data
 
     def get_orders(
@@ -361,7 +353,8 @@ class DB:
                     data_all[item["order_id"]]["extras"].split(",")
                 )
                 data_all[item["order_id"]]["status_str"] = get_string_status(
-                    data_all[item["order_id"]]["status"]
+                    self.statuses,
+                    data_all[item["order_id"]]["status"],
                 )
                 data_all[item["order_id"]][
                     "timestamp"
