@@ -1,11 +1,12 @@
 {% extends 'root.html' %}
 
 {% block header %}
-<script src="{{ url_for('static', filename='js/ajax_order.js') }}?v=3"></script>
+<script src="{{ url_for('static', filename='js/ajax_order.js') }}?v=4"></script>
 {% endblock %}
 
 {% block content %}
 <input type="hidden" id="order_id" value={% if error %}""{% else %}"{{order_id}}"{% endif %} />
+<input type="hidden" id="status_delivered" value={{status_delivered}} />
 <h4><span class="badge badge-dark w-100">Order status</span></h4>
 {% if error %}
 <p class="font-weight-bold text-danger">{{error}}</p>
@@ -25,7 +26,7 @@
             <td><a href="/orders/{{order_id}}">{{order_id}}</a></td>
             <td>{{timestamp}}</td>
             <td>{{name}}</td>
-            <td><span class="badge {% if status == 400 %}badge-success{% else %}badge-info{% endif %}"
+            <td><span class="badge {% if status == status_delivered %}badge-success{% else %}badge-info{% endif %}"
                     id="order_status">{{status_str}}</span></td>
             {% autoescape false %}
             <td>{{order}}</td>

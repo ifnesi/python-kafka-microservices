@@ -70,7 +70,7 @@ with GRACEFUL_SHUTDOWN as _:
     with DB(
         ORDERS_DB,
         ORDER_TABLE,
-        statuses=SYS_CONFIG["status"],
+        sys_config=SYS_CONFIG,
     ) as db:
         db.create_order_table()
         db.delete_past_timestamp(hours=2)
@@ -119,7 +119,7 @@ def order_pizza():
         extra_toppings = request.form.getlist("extra_topping") or list()
 
         order_details = {
-            "status": 100,
+            "status": SYS_CONFIG["status-id"]["order_received"],
             "timestamp": int(datetime.datetime.now().timestamp() * 1000),
             "order": {
                 "extra_toppings": extra_toppings,
@@ -132,7 +132,7 @@ def order_pizza():
         with DB(
             ORDERS_DB,
             ORDER_TABLE,
-            statuses=SYS_CONFIG["status"],
+            sys_config=SYS_CONFIG,
         ) as db:
             db.add_order(
                 order_id,
@@ -163,7 +163,7 @@ def view_orders():
         with DB(
             ORDERS_DB,
             ORDER_TABLE,
-            statuses=SYS_CONFIG["status"],
+            sys_config=SYS_CONFIG,
         ) as db:
             db.delete_past_timestamp(hours=2)
             return render_template(
@@ -180,7 +180,7 @@ def get_order_ajax(order_id):
         with DB(
             ORDERS_DB,
             ORDER_TABLE,
-            statuses=SYS_CONFIG["status"],
+            sys_config=SYS_CONFIG,
         ) as db:
             order_details = db.get_order_id(order_id)
             if order_details is not None:
@@ -198,7 +198,7 @@ def get_order(order_id):
         with DB(
             ORDERS_DB,
             ORDER_TABLE,
-            statuses=SYS_CONFIG["status"],
+            sys_config=SYS_CONFIG,
         ) as db:
             order_details = db.get_order_id(order_id)
             if order_details is not None:
@@ -212,6 +212,7 @@ def get_order(order_id):
                     ).strftime("%Y-%b-%d %H:%M:%S"),
                     status=order_details["status"],
                     status_str=order_details["status_str"],
+                    status_delivered=SYS_CONFIG["status-id"]["delivered"],
                     name=order_details["name"],
                     order=f"""Sauce: {order_details["sauce"]}<br>
                             Cheese: {order_details["cheese"]}<br>

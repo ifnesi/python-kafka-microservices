@@ -50,14 +50,13 @@ def get_system_config(
         for s in ("sauce", "cheese", "main_topping", "extra_toppings"):
             sys_config["pizza"][s] = parse_list(sys_config["pizza"][s])
 
-        # Parse order statuses
+        # Parse order status
         sys_config["status"] = {
             None: sys_config["status-label"]["else"],
         }
-        for k, v in sys_config["statuses"].items():
+        for k, v in sys_config["status-id"].items():
+            sys_config["status-id"][k] = int(v)
             sys_config["status"][int(v)] = sys_config["status-label"][k]
-        sys_config.pop("statuses")
-        sys_config.pop("status-label")
 
         # Filter by section (if required)
         if section is not None:
@@ -132,10 +131,10 @@ def get_script_name(file: str) -> str:
     return os.path.splitext(os.path.basename(file))[0]
 
 
-def get_string_status(statuses: dict, status: int) -> str:
-    return statuses.get(
+def get_string_status(status_dict: dict, status: int) -> str:
+    return status_dict.get(
         status,
-        f"""{statuses.get(None, "Oops! Unknown status")} ({status})""",
+        f"""{status_dict.get(None, "Oops! Unknown status")} ({status})""",
     )
 
 
@@ -258,11 +257,11 @@ class DB:
         self,
         db_name: str,
         table_name: str,
-        statuses: dict = None,
+        sys_config: dict = None,
     ):
         self.db_name = db_name
         self.table_name = table_name
-        self.statuses = statuses
+        self.sys_config = sys_config
         self.conn = None
         self.cur = None
 
@@ -335,7 +334,9 @@ class DB:
             cols = list(map(lambda x: x[0], self.cur.description))
             data = dict(zip(cols, data))
             data["extras"] = ", ".join(data["extras"].split(","))
-            data["status_str"] = get_string_status(self.statuses, data["status"])
+            data["status_str"] = get_string_status(
+                self.sys_config["status"], data["status"]
+            )
         return data
 
     def get_orders(
@@ -353,7 +354,7 @@ class DB:
                     data_all[item["order_id"]]["extras"].split(",")
                 )
                 data_all[item["order_id"]]["status_str"] = get_string_status(
-                    self.statuses,
+                    self.sys_config["status"],
                     data_all[item["order_id"]]["status"],
                 )
                 data_all[item["order_id"]][
@@ -433,7 +434,7 @@ class DB:
                 {int(datetime.datetime.now().timestamp() * 1000)},
                 '{order_details["order"]["name"]}',
                 '{order_details["order"]["customer_id"]}',
-                100,
+                {self.sys_config["status-id"]["order_received"]},
                 '{order_details["order"]["sauce"]}',
                 '{order_details["order"]["cheese"]}',
                 '{order_details["order"]["main_topping"]}',

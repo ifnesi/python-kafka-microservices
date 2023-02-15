@@ -151,7 +151,7 @@ def receive_orders():
                             )
                             update_pizza_status(
                                 order_id,
-                                200,
+                                SYS_CONFIG["status-id"]["in_the_oven"],
                             )
 
                     except Exception:

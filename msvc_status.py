@@ -70,7 +70,7 @@ with GRACEFUL_SHUTDOWN as _:
     with DB(
         ORDERS_DB,
         ORDER_TABLE,
-        statuses=SYS_CONFIG["status"],
+        sys_config=SYS_CONFIG,
     ) as db:
         db.create_order_table()
         db.delete_past_timestamp(hours=2)
@@ -97,7 +97,7 @@ def get_pizza_status():
                         with DB(
                             ORDERS_DB,
                             ORDER_TABLE,
-                            statuses=SYS_CONFIG["status"],
+                            sys_config=SYS_CONFIG,
                         ) as db:
                             order_data = db.get_order_id(
                                 order_id,
@@ -106,9 +106,14 @@ def get_pizza_status():
                                 try:
                                     pizza_status = json.loads(
                                         event.value().decode()
-                                    ).get("status", -200)
+                                    ).get(
+                                        "status",
+                                        SYS_CONFIG["status-id"]["unknown"],
+                                    )
                                 except Exception:
-                                    pizza_status = -999
+                                    pizza_status = SYS_CONFIG["status-id"][
+                                        "something_wrong"
+                                    ]
                                     log_exception(
                                         f"Error when processing event.value() {event.value()}",
                                         sys.exc_info(),

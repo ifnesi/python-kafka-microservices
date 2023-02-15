@@ -1,8 +1,10 @@
 var order_id;
+var status_delivered;
 var last_result = -1;
 
 $(document).ready(function () {
     order_id = $("#order_id").val();
+    status_delivered = $("#status_delivered").val();
     setTimeout(function () {
         update_order_status();
     }, 1000);
@@ -23,13 +25,13 @@ function update_order_status() {
             dataType: "json",
             success: function (data) {
                 if (data) {
-                    if (last_result != 400) {
+                    if (last_result != status_delivered) {
                         $("#order_status").text(data.str);
                         setTimeout(function () {
                             update_order_status();
                         }, 1000);
                     }
-                    if (data.status == 400) {
+                    if (data.status == status_delivered) {
                         toggle_status("badge-info", "badge-success");
                     }
                     else if (last_result != data.status && last_result != -1) {

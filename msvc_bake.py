@@ -135,7 +135,7 @@ def receive_pizza_assembled():
                             )
                             update_pizza_status(
                                 order_id,
-                                300,
+                                SYS_CONFIG["status-id"]["out_for_delivery"],
                             )
 
                     except Exception:

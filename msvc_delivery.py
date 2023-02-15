@@ -75,7 +75,7 @@ with GRACEFUL_SHUTDOWN as _:
     with DB(
         CUSTOMER_DB,
         CUSTOMER_TABLE,
-        statuses=SYS_CONFIG["status"],
+        sys_config=SYS_CONFIG,
     ) as db:
         db.create_customer_table()
         db.delete_past_timestamp(hours=2)
@@ -118,7 +118,7 @@ def receive_pizza_baked():
         # Update kafka topics (pizza delivered)
         update_pizza_status(
             order_id,
-            400,
+            SYS_CONFIG["status-id"]["delivered"],
         )
 
     CONSUMER.subscribe(CONSUME_TOPICS)
@@ -148,7 +148,7 @@ def receive_pizza_baked():
                                 with DB(
                                     CUSTOMER_DB,
                                     CUSTOMER_TABLE,
-                                    statuses=SYS_CONFIG["status"],
+                                    sys_config=SYS_CONFIG,
                                 ) as db:
                                     check_order = db.get_order_id_customer(order_id)
                                     if check_order is not None:
@@ -160,7 +160,7 @@ def receive_pizza_baked():
                                     with DB(
                                         CUSTOMER_DB,
                                         CUSTOMER_TABLE,
-                                        statuses=SYS_CONFIG["status"],
+                                        sys_config=SYS_CONFIG,
                                     ) as db:
                                         db.update_customer(order_id, customer_id)
                                         deliver_pizza(
@@ -174,7 +174,7 @@ def receive_pizza_baked():
                                     with DB(
                                         CUSTOMER_DB,
                                         CUSTOMER_TABLE,
-                                        statuses=SYS_CONFIG["status"],
+                                        sys_config=SYS_CONFIG,
                                     ) as db:
                                         db.add_customer(order_id, customer_id)
 
@@ -194,7 +194,7 @@ def receive_pizza_baked():
                             with DB(
                                 CUSTOMER_DB,
                                 CUSTOMER_TABLE,
-                                statuses=SYS_CONFIG["status"],
+                                sys_config=SYS_CONFIG,
                             ) as db:
                                 customer_id = db.get_order_id_customer(order_id)
 
@@ -212,13 +212,13 @@ def receive_pizza_baked():
                                 # Update kafka topics (error with order)
                                 update_pizza_status(
                                     order_id,
-                                    -100,
+                                    SYS_CONFIG["status-id"]["pending"],
                                 )
                                 # Add order_id to the DB as "pending", that happens when the early notification (for some reason) arrives after the notification the pizza is baked
                                 with DB(
                                     CUSTOMER_DB,
                                     CUSTOMER_TABLE,
-                                    statuses=SYS_CONFIG["status"],
+                                    sys_config=SYS_CONFIG,
                                 ) as db:
                                     db.add_customer(order_id, PENDING_ORDER)
 
