@@ -9,3 +9,6 @@ __pycache__
 config_kafka/*
 !config_kafka/example.ini
 !config_kafka/localhost.ini
+
+config_sys/*
+!config_sys/default.ini
