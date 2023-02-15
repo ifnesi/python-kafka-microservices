@@ -6,6 +6,6 @@ __pycache__
 *.db
 .DS_Store
 
-config/*
-!config/example.ini
-!config/localhost.ini
+config_kafka/*
+!config_kafka/example.ini
+!config_kafka/localhost.ini
