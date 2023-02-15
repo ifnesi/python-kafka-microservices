@@ -60,7 +60,7 @@ PRODUCER, CONSUMER = set_producer_consumer(
         "on_delivery": delivery_report,
     },
     consumer_extra_config={
-        "group.id": SYS_CONFIG["kafka-consumer-id"]["microservice_assembled"],
+        "group.id": SYS_CONFIG["kafka-consumer-group-id"]["microservice_assembled"],
     },
 )
 
