@@ -32,7 +32,7 @@ While event sourcing can be used to implement CQRS, it does not necessarily impl
 
 ### High level view
 This pizza takeaway shop ecosystem was designed using Python and made simple for demo/learning purposes, basically the following are the app/microservices created:
-- Web application using the Flask lib (```webapp.py```) so users can login to, customise their pizza, order and follow up the status of their order. This webapp will be the Command portion of the CQRS pattern. To make it simpler a SQLite3 database is being used as a buffer between Command and Query, however in a real life scenario that could be an in-memory data store
+- Web application using the Flask lib (```webapp.py```) so users can login to, customise their pizza, order and follow up the status of their order. This webapp will be the Command portion of the CQRS pattern. To make it simpler a SQLite3 database is being used as the materialised view between Command and Query, however in a real life scenario that could be an in-memory data store or ksqlDB
 - Once the pizza is ordered it will go through four microservices (following the same flow of a real pizza shop):
   - Assemble the pizza as per order (```msvc_assemble.py```)
   - Bake the pizza (```msvc_bake.py```)
