@@ -1,3 +1,19 @@
+# -*- coding: utf-8 -*-
+#
+# Copyright 2022 Confluent Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import os
 import sys
 import signal
@@ -22,6 +38,50 @@ ORDER_STATUSES = {
 
 
 # Generic functions
+def get_system_config(
+    config_file: str = "default.ini",
+    section: str = None,
+) -> dict:
+    def parse_list(data: str) -> list:
+        return [
+            item.strip()
+            for item in data.replace("\r", "\n").split("\n")
+            if item.strip()
+        ]
+
+    try:
+        # Read configuration file
+        config_parser = ConfigParser(interpolation=None)
+        file_name = os.path.join("config_sys", config_file)
+        config_parser.read_file(open(file_name, "r"))
+
+        # Parse sections
+        sys_config = dict()
+        for s in config_parser.sections():
+            sys_config[s] = dict(config_parser[s])
+        for s in ("sauce", "cheese", "main_topping", "extra_toppings"):
+            sys_config["pizza"][s] = parse_list(sys_config["pizza"][s])
+
+        # Parse order status
+        sys_config["status"] = dict()
+        for k, v in sys_config["statuses"].items():
+            sys_config["status"][int(v)] = sys_config["status-label"][k]
+        sys_config.pop("statuses")
+        sys_config.pop("status-label")
+
+        # Filter by section (if required)
+        if section is not None:
+            sys_config = sys_config.get(section)
+
+    except Exception:
+        log_exception(
+            f"Unable to parse system configuration file: {file_name}",
+            sys.exc_info(),
+        )
+
+    return sys_config
+
+
 def log_ini(
     script: str,
     level: int = logging.INFO,
@@ -46,15 +106,26 @@ def log_exception(message: str, sys_exc_info) -> None:
 
 
 def validate_cli_args(script: str):
-    if len(sys.argv) <= 1:
+    if len(sys.argv) == 2:
+        sys.argv.append("default.ini")
+    elif len(sys.argv) <= 1:
         logging.error(
-            f"Missing configuration file. Usage: {script}.py {{CONFIGURATION_FILE}} (under the folder 'config/')\n",
+            (
+                f"Missing configuration files. Usage: {script}.py {{KAFKA_CONFIG_FILE}} {{SYS_CONFIG_FILE}}\n"
+                "Where:\n"
+                " - KAFKA_CONFIG_FILE: file under the folder 'config_kafka/'\n"
+                " - SYS_CONFIG_FILE: file under the folder 'config_sys/' (default file is 'default.ini')"
+            )
         )
         sys.exit(0)
     else:
-        config_file = os.path.join("config", sys.argv[1])
-        if not os.path.isfile(config_file):
-            logging.error(f"Configuration file not found: {config_file}")
+        kafka_config_file = os.path.join("config_kafka", sys.argv[1])
+        if not os.path.isfile(kafka_config_file):
+            logging.error(f"Kafka configuration file not found: {kafka_config_file}")
+            sys.exit(0)
+        sys_config_file = os.path.join("config_sys", sys.argv[2])
+        if not os.path.isfile(sys_config_file):
+            logging.error(f"System configuration file not found: {sys_config_file}")
             sys.exit(0)
 
 
@@ -94,20 +165,20 @@ def set_producer_consumer(
     config_parser.read_file(
         open(
             os.path.join(
-                "config",
+                "config_kafka",
                 config_file,
             ),
             "r",
         )
     )
 
-    kafka_config = dict(config_parser["kafka"])
+    config_kafka = dict(config_parser["kafka"])
 
     # Set producer config
     if not disable_producer:
         producer = Producer(
             {
-                **kafka_config,
+                **config_kafka,
                 **producer_extra_config,
             }
         )
@@ -123,7 +194,7 @@ def set_producer_consumer(
         }
         consumer = Consumer(
             {
-                **kafka_config,
+                **config_kafka,
                 **consumer_common_config,
                 **consumer_extra_config,
             }
