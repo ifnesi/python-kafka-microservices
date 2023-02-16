@@ -25,6 +25,14 @@ from configparser import ConfigParser
 from confluent_kafka import Producer, Consumer
 
 
+####################
+# Global variables #
+####################
+FOLDER_PID = "pid"
+FOLDER_CONFIG_KAFKA = "config_kafka"
+FOLDER_CONFIG_SYS = "config_sys"
+
+
 #####################
 # Generic functions #
 #####################
@@ -44,7 +52,7 @@ def import_state_store_class(db_module_class: str):
 
 
 def get_system_config(
-    config_file: str = "default.ini",
+    sys_config_file: str,
     section: str = None,
 ) -> dict:
     def parse_list(data: str) -> list:
@@ -57,8 +65,7 @@ def get_system_config(
     try:
         # Read configuration file
         config_parser = ConfigParser(interpolation=None)
-        file_name = os.path.join("config_sys", config_file)
-        config_parser.read_file(open(file_name, "r"))
+        config_parser.read_file(open(sys_config_file, "r"))
 
         # Parse sections
         sys_config = dict()
@@ -98,7 +105,7 @@ def get_system_config(
 
     except Exception:
         log_exception(
-            f"Unable to parse system configuration file: {file_name}\n",
+            f"Unable to parse system configuration file: {sys_config_file}\n",
             sys.exc_info(),
         )
         sys.exit(0)
@@ -129,7 +136,7 @@ def log_exception(message: str, sys_exc_info) -> None:
     logging.critical(f"{message}: [{exc_type} | {fname}@{exc_tb.tb_lineno}] {exc_obj}")
 
 
-def validate_cli_args(script: str):
+def validate_cli_args(script: str) -> tuple:
     if len(sys.argv) == 2:
         sys.argv.append("default.ini")
     elif len(sys.argv) <= 1:
@@ -142,23 +149,36 @@ def validate_cli_args(script: str):
             )
         )
         sys.exit(0)
-    else:
-        kafka_config_file = os.path.join("config_kafka", sys.argv[1])
-        if not os.path.isfile(kafka_config_file):
-            logging.error(f"Kafka configuration file not found: {kafka_config_file}\n")
-            sys.exit(0)
-        sys_config_file = os.path.join("config_sys", sys.argv[2])
-        if not os.path.isfile(sys_config_file):
-            logging.error(f"System configuration file not found: {sys_config_file}\n")
-            sys.exit(0)
+
+    config_kafka = sys.argv[1]
+    config_sys = sys.argv[2]
+    kafka_config_file = os.path.join(
+        FOLDER_CONFIG_KAFKA,
+        config_kafka,
+    )
+    sys_config_file = os.path.join(
+        FOLDER_CONFIG_SYS,
+        config_sys,
+    )
+
+    if not os.path.isfile(kafka_config_file):
+        logging.error(f"Kafka configuration file not found: {kafka_config_file}\n")
+        sys.exit(0)
+    elif not os.path.isfile(sys_config_file):
+        logging.error(f"System configuration file not found: {sys_config_file}\n")
+        sys.exit(0)
+
+    return (
+        kafka_config_file,
+        sys_config_file,
+    )
 
 
 def save_pid(script: str):
     """Save PID to disk"""
-    PID_FOLDER = "pid"
-    if not os.path.isdir(PID_FOLDER):
-        os.mkdir(PID_FOLDER)
-    with open(os.path.join(PID_FOLDER, f"{script}.pid"), "w") as f:
+    if not os.path.isdir(FOLDER_PID):
+        os.mkdir(FOLDER_PID)
+    with open(os.path.join(FOLDER_PID, f"{script}.pid"), "w") as f:
         f.write(str(os.getpid()))
 
 
@@ -174,7 +194,7 @@ def get_string_status(status_dict: dict, status: int) -> str:
 
 
 def set_producer_consumer(
-    config_file: str,
+    kafka_config_file: str,
     producer_extra_config: dict = None,
     consumer_extra_config: dict = None,
     disable_producer: bool = False,
@@ -186,15 +206,7 @@ def set_producer_consumer(
 
     # Read configuration file
     config_parser = ConfigParser(interpolation=None)
-    config_parser.read_file(
-        open(
-            os.path.join(
-                "config_kafka",
-                config_file,
-            ),
-            "r",
-        )
-    )
+    config_parser.read_file(open(kafka_config_file, "r"))
 
     config_kafka = dict(config_parser["kafka"])
 

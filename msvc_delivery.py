@@ -44,19 +44,18 @@ SCRIPT = get_script_name(__file__)
 log_ini(SCRIPT)
 
 # Validate command arguments
-validate_cli_args(SCRIPT)
+kafka_config_file, sys_config_file = validate_cli_args(SCRIPT)
 
 # Get system config file
-SYS_CONFIG = get_system_config(sys.argv[2])
+SYS_CONFIG = get_system_config(sys_config_file)
 
 # Set producer/consumer objects
 PRODUCE_TOPIC_STATUS = SYS_CONFIG["kafka-topics"]["pizza_status"]
 TOPIC_PIZZA_ORDERED = SYS_CONFIG["kafka-topics"]["pizza_ordered"]
 TOPIC_PIZZA_BAKED = SYS_CONFIG["kafka-topics"]["pizza_baked"]
 CONSUME_TOPICS = [TOPIC_PIZZA_ORDERED, TOPIC_PIZZA_BAKED]
-validate_cli_args(SCRIPT)
 PRODUCER, CONSUMER = set_producer_consumer(
-    sys.argv[1],
+    kafka_config_file,
     producer_extra_config={
         "on_delivery": delivery_report,
     },

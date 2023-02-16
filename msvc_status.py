@@ -46,17 +46,17 @@ SCRIPT = get_script_name(__file__)
 log_ini(SCRIPT)
 
 # Validate command arguments
-validate_cli_args(SCRIPT)
+kafka_config_file, sys_config_file = validate_cli_args(SCRIPT)
 
 # Get system config file
-SYS_CONFIG = get_system_config(sys.argv[2])
+SYS_CONFIG = get_system_config(sys_config_file)
 
 # Set consumer object
 CONSUME_TOPICS = [
     SYS_CONFIG["kafka-topics"]["pizza_status"],
 ]
 _, CONSUMER = set_producer_consumer(
-    sys.argv[1],
+    kafka_config_file,
     disable_producer=True,
     consumer_extra_config={
         "group.id": SYS_CONFIG["kafka-consumer-group-id"]["microservice_status"],
