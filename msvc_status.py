@@ -60,6 +60,7 @@ _, CONSUMER = set_producer_consumer(
     disable_producer=True,
     consumer_extra_config={
         "group.id": SYS_CONFIG["kafka-consumer-group-id"]["microservice_status"],
+        "client.id": SYS_CONFIG["kafka-client-id"]["microservice_status"],
     },
 )
 
