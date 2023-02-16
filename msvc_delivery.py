@@ -69,16 +69,17 @@ PRODUCER, CONSUMER = set_producer_consumer(
 GRACEFUL_SHUTDOWN = GracefulShutdown(consumer=CONSUMER)
 
 # SQLite
-CUSTOMER_DB = SYS_CONFIG["sqlite-customers"]["db"]
-CUSTOMER_TABLE = SYS_CONFIG["sqlite-customers"]["table"]
+CUSTOMER_DB = SYS_CONFIG["sqlite-delivery"]["db"]
 with GRACEFUL_SHUTDOWN as _:
     with DB(
         CUSTOMER_DB,
-        CUSTOMER_TABLE,
         sys_config=SYS_CONFIG,
     ) as db:
         db.create_customer_table()
-        db.delete_past_timestamp(hours=2)
+        db.delete_past_timestamp(
+            SYS_CONFIG["sqlite-delivery"]["table_customers"],
+            hours=2,
+        )
 
 
 #####################
@@ -125,7 +126,7 @@ def receive_pizza_baked():
     logging.info(f"Subscribed to topic(s): {', '.join(CONSUME_TOPICS)}")
     while True:
         with GRACEFUL_SHUTDOWN as _:
-            event = CONSUMER.poll(0.25)
+            event = CONSUMER.poll(1)
             if event is not None:
                 if event.error():
                     logging.error(event.error())
@@ -147,7 +148,6 @@ def receive_pizza_baked():
                                 is_pending = False
                                 with DB(
                                     CUSTOMER_DB,
-                                    CUSTOMER_TABLE,
                                     sys_config=SYS_CONFIG,
                                 ) as db:
                                     check_order = db.get_order_id_customer(order_id)
@@ -159,7 +159,6 @@ def receive_pizza_baked():
                                     # Update customer_id for the order_id
                                     with DB(
                                         CUSTOMER_DB,
-                                        CUSTOMER_TABLE,
                                         sys_config=SYS_CONFIG,
                                     ) as db:
                                         db.update_customer(order_id, customer_id)
@@ -173,7 +172,6 @@ def receive_pizza_baked():
                                     # In a real life scenario this microservices would have the delivery address of the customer_id
                                     with DB(
                                         CUSTOMER_DB,
-                                        CUSTOMER_TABLE,
                                         sys_config=SYS_CONFIG,
                                     ) as db:
                                         db.add_customer(order_id, customer_id)
@@ -193,7 +191,6 @@ def receive_pizza_baked():
                             # Get customer_id (and address in a real life scenario) based on the order_id
                             with DB(
                                 CUSTOMER_DB,
-                                CUSTOMER_TABLE,
                                 sys_config=SYS_CONFIG,
                             ) as db:
                                 customer_id = db.get_order_id_customer(order_id)
@@ -217,7 +214,6 @@ def receive_pizza_baked():
                                 # Add order_id to the DB as "pending", that happens when the early notification (for some reason) arrives after the notification the pizza is baked
                                 with DB(
                                     CUSTOMER_DB,
-                                    CUSTOMER_TABLE,
                                     sys_config=SYS_CONFIG,
                                 ) as db:
                                     db.add_customer(order_id, PENDING_ORDER)
