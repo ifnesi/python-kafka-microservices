@@ -207,7 +207,7 @@ One very important element of any Kafka consumer is by handling OS signals to be
 (msvc_delivery) INFO 21:46:57.341 - Graceful shutdown completed
 ```
 
-### Demo
+### Demo (happy path)
 ![image](docs/demo.gif)
 
 Enjoy!
