@@ -48,12 +48,15 @@ db_module_class = utils.db.sqlite
 db_module_class = utils.db.sqlite
 ```
 
-See below the webapp and four microservices in action:
+Webapp and four microservices in action:
 ![image](docs/service_flow.png)
 
 ### Low level view
-Below is a more detailed view of all microservices and to what Kafka topics their produce and are subscribed to:
+Detailed view of all microservices and to what Kafka topics their produce and are subscribed to:
 ![image](docs/gen_architecture.png)
+
+Confluent Cloud Stream Lineage view:
+![image](docs/cc-stream-lineage.png)
 
 ### Installation and Configuration
 - SQLite3 and Python +3.8 required
