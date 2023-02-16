@@ -39,7 +39,6 @@ This pizza takeaway shop ecosystem was designed using Python and made simple for
   - Have it delivered (```msvc_delivery.py```)
   - Process status (```msvc_status.py```): Whenever one of the previous microservices complete their task they will communicate with this microservice so it can update the web application. This microservice will be the Query portion of the CQRS pattern. It will have the materialised views stored in the aforementioned SQLite3 state store(*)
 - All interprocess communication is via an Apache Kafka cluster
-<br>
 (*) By default SQLite3 will be used, but that can be changed via system configuration file (default is 'config_sys/default.ini') by setting a different python class (the abstract class is available on utils.db class ```BaseStateStore```), see below the default system configuration:
 ```
 [state-store-orders]
@@ -48,7 +47,7 @@ db_module_class = utils.db.sqlite
 [state-store-delivery]
 db_module_class = utils.db.sqlite
 ```
-<br><br>
+
 See below the webapp and four microservices in action:
 ![image](docs/service_flow.png)
 
