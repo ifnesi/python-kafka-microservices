@@ -18,8 +18,8 @@ import os
 import sys
 import signal
 import logging
-import sqlite3
 import datetime
+import importlib
 
 from configparser import ConfigParser
 from confluent_kafka import Producer, Consumer
@@ -28,6 +28,21 @@ from confluent_kafka import Producer, Consumer
 #####################
 # Generic functions #
 #####################
+def import_state_store_class(db_module_class: str):
+    try:
+        module = importlib.import_module(db_module_class)
+        if module is not None:
+            return module.DB
+        else:
+            raise Exception()
+    except Exception:
+        log_exception(
+            f"Unable to import db_module_class: {db_module_class}\n",
+            sys.exc_info(),
+        )
+        sys.exit(0)
+
+
 def get_system_config(
     config_file: str = "default.ini",
     section: str = None,
@@ -62,19 +77,19 @@ def get_system_config(
 
         # Parse status parameters
         status_completed_when = parse_list(
-            sys_config["sqlite-orders"]["status_completed_when"]
+            sys_config["state-store-orders"]["status_completed_when"]
         )
-        sys_config["sqlite-orders"]["status_completed_when"] = list()
+        sys_config["state-store-orders"]["status_completed_when"] = list()
         for status in status_completed_when:
-            sys_config["sqlite-orders"]["status_completed_when"].append(
+            sys_config["state-store-orders"]["status_completed_when"].append(
                 int(sys_config["status-id"][status])
             )
 
-        sys_config["sqlite-orders"]["status_watchdog_minutes"] = float(
-            sys_config["sqlite-orders"]["status_watchdog_minutes"]
+        sys_config["state-store-orders"]["status_watchdog_minutes"] = float(
+            sys_config["state-store-orders"]["status_watchdog_minutes"]
         )
-        sys_config["sqlite-orders"]["status_invalid_timeout_minutes"] = float(
-            sys_config["sqlite-orders"]["status_invalid_timeout_minutes"]
+        sys_config["state-store-orders"]["status_invalid_timeout_minutes"] = float(
+            sys_config["state-store-orders"]["status_invalid_timeout_minutes"]
         )
 
         # Filter by section (if required)
@@ -83,7 +98,7 @@ def get_system_config(
 
     except Exception:
         log_exception(
-            f"Unable to parse system configuration file: {file_name}",
+            f"Unable to parse system configuration file: {file_name}\n",
             sys.exc_info(),
         )
         sys.exit(0)
@@ -123,18 +138,18 @@ def validate_cli_args(script: str):
                 f"Missing configuration files. Usage: {script}.py {{KAFKA_CONFIG_FILE}} {{SYS_CONFIG_FILE}}\n"
                 "Where:\n"
                 " - KAFKA_CONFIG_FILE: file under the folder 'config_kafka/'\n"
-                " - SYS_CONFIG_FILE: file under the folder 'config_sys/' (default file is 'default.ini')"
+                " - SYS_CONFIG_FILE: file under the folder 'config_sys/' (default file is 'default.ini')\n"
             )
         )
         sys.exit(0)
     else:
         kafka_config_file = os.path.join("config_kafka", sys.argv[1])
         if not os.path.isfile(kafka_config_file):
-            logging.error(f"Kafka configuration file not found: {kafka_config_file}")
+            logging.error(f"Kafka configuration file not found: {kafka_config_file}\n")
             sys.exit(0)
         sys_config_file = os.path.join("config_sys", sys.argv[2])
         if not os.path.isfile(sys_config_file):
-            logging.error(f"System configuration file not found: {sys_config_file}")
+            logging.error(f"System configuration file not found: {sys_config_file}\n")
             sys.exit(0)
 
 
@@ -274,287 +289,3 @@ class GracefulShutdown:
             logging.info("Graceful shutdown completed")
             sys.exit(0)
         self.was_signal_set = True
-
-
-class DB:
-    """Class/context manager to connect to local DB"""
-
-    def __init__(
-        self,
-        db_name: str,
-        sys_config: dict = None,
-    ):
-        self.db_name = db_name
-        self.sys_config = sys_config
-        self.conn = None
-        self.cur = None
-
-    def __enter__(self):
-        self.conn = sqlite3.connect(self.db_name)
-        self.cur = self.conn.cursor()
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        if self.conn is not None:
-            try:
-                self.conn.close()
-            except:
-                pass
-
-    def create_customer_table(self):
-        self.execute(
-            f"""CREATE TABLE IF NOT EXISTS {self.sys_config["sqlite-delivery"]["table_customers"]} (
-                order_id TEXT PRIMARY KEY,
-                timestamp INTEGER,
-                customer_id TEXT
-            )""",
-            commit=True,
-        )
-
-    def create_order_table(self):
-        self.execute(
-            f"""CREATE TABLE IF NOT EXISTS {self.sys_config["sqlite-orders"]["table_orders"]} (
-                order_id TEXT PRIMARY KEY,
-                timestamp INTEGER,
-                name TEXT,
-                customer_id TEXT,
-                status INTEGER,
-                sauce TEXT,
-                cheese TEXT,
-                topping TEXT,
-                extras TEXT
-            )""",
-            commit=True,
-        )
-
-    def create_status_table(self):
-        self.execute(
-            f"""CREATE TABLE IF NOT EXISTS {self.sys_config["sqlite-orders"]["table_status"]} (
-                order_id TEXT PRIMARY KEY,
-                timestamp INTEGER,
-                status INTEGER
-            )""",
-            commit=True,
-        )
-
-    def check_status_stuck(self) -> dict:
-        self.execute(
-            f"""SELECT * FROM {self.sys_config["sqlite-orders"]["table_status"]}
-                WHERE
-                    timestamp < {timestamp_now() - self.sys_config["sqlite-orders"]["status_invalid_timeout_minutes"] * 60 * 1000}
-                    AND status NOT IN ({",".join([str(s) for s in self.sys_config["sqlite-orders"]["status_completed_when"]])})
-            """,
-            commit=False,
-        )
-        data = self.cur.fetchall()
-        data_all = dict()
-        if data:
-            cols = list(map(lambda x: x[0], self.cur.description))
-            for item in data:
-                item = dict(zip(cols, item))
-                data_all[item["order_id"]] = {
-                    "status": item["status"],
-                    "timestamp": item["timestamp"],
-                }
-        return data_all
-
-    def delete_stuck_status(self, order_id: str):
-        self.execute(
-            f"""DELETE FROM {self.sys_config["sqlite-orders"]["table_status"]}
-                WHERE
-                    order_id = '{order_id}'
-            """,
-            commit=True,
-        )
-
-    def delete_past_timestamp(
-        self,
-        table_name: str,
-        timestamp_field: str = "timestamp",
-        hours: int = 1,
-    ):
-        self.execute(
-            f"""DELETE FROM {table_name}
-            WHERE
-                {timestamp_field} < {timestamp_now() - hours * 60 * 60 * 1000}
-            """,
-            commit=True,
-        )
-
-    def execute(
-        self,
-        expression: str,
-        commit: bool = False,
-    ):
-        result = self.cur.execute(expression)
-        if commit:
-            self.conn.commit()
-        return result
-
-    def get_order_id_customer(
-        self,
-        order_id: str,
-    ) -> dict:
-        self.execute(
-            f"""SELECT * FROM {self.sys_config["sqlite-delivery"]["table_customers"]}
-                WHERE
-                    order_id='{order_id}'""",
-            commit=False,
-        )
-        data = self.cur.fetchone()
-        if data is not None:
-            cols = list(map(lambda x: x[0], self.cur.description))
-            data = dict(zip(cols, data))
-        return data
-
-    def get_order_id(
-        self,
-        order_id: str,
-    ) -> dict:
-        self.execute(
-            f"""SELECT * FROM {self.sys_config["sqlite-orders"]["table_orders"]}
-                WHERE
-                    order_id='{order_id}'""",
-            commit=False,
-        )
-        data = self.cur.fetchone()
-        if data is not None:
-            cols = list(map(lambda x: x[0], self.cur.description))
-            data = dict(zip(cols, data))
-            data["extras"] = ", ".join(data["extras"].split(","))
-            data["status_str"] = get_string_status(
-                self.sys_config["status"], data["status"]
-            )
-        return data
-
-    def get_orders(
-        self,
-    ) -> dict:
-        self.execute(
-            f"""SELECT * FROM {self.sys_config["sqlite-orders"]["table_orders"]} ORDER BY timestamp DESC""",
-            commit=False,
-        )
-        data = self.cur.fetchall()
-        data_all = dict()
-        if data:
-            cols = list(map(lambda x: x[0], self.cur.description))
-            for item in data:
-                item = dict(zip(cols, item))
-                data_all[item["order_id"]] = item
-                data_all[item["order_id"]]["extras"] = ", ".join(
-                    data_all[item["order_id"]]["extras"].split(",")
-                )
-                data_all[item["order_id"]]["status_str"] = get_string_status(
-                    self.sys_config["status"],
-                    data_all[item["order_id"]]["status"],
-                )
-                data_all[item["order_id"]][
-                    "timestamp"
-                ] = datetime.datetime.fromtimestamp(
-                    data_all[item["order_id"]]["timestamp"] / 1000
-                ).strftime(
-                    "%Y-%b-%d %H:%M:%S"
-                )
-        return data_all
-
-    def update_order_status(
-        self,
-        order_id: str,
-        status: int,
-    ):
-        self.execute(
-            f"""UPDATE {self.sys_config["sqlite-orders"]["table_orders"]} SET
-                    status={status}
-                WHERE
-                    order_id='{order_id}'
-            """,
-            commit=True,
-        )
-
-    def upsert_status(
-        self,
-        order_id: str,
-        status: int,
-    ):
-        self.execute(
-            f"""INSERT INTO {self.sys_config["sqlite-orders"]["table_status"]} (
-                order_id,
-                timestamp,
-                status
-            ) VALUES (
-                '{order_id}',
-                {timestamp_now()},
-                {status}
-            ) ON CONFLICT (order_id) DO UPDATE SET
-                timestamp={timestamp_now()},
-                status={status}
-            WHERE
-                order_id='{order_id}'
-            """,
-            commit=True,
-        )
-
-    def update_customer(
-        self,
-        order_id: str,
-        customer_id: dict,
-    ):
-        self.execute(
-            f"""UPDATE {self.sys_config["sqlite-delivery"]["table_customers"]} SET
-                    timestamp={timestamp_now()},
-                    customer_id='{customer_id}'
-                WHERE
-                    order_id='{order_id}'
-            """,
-            commit=True,
-        )
-
-    def add_customer(
-        self,
-        order_id: str,
-        customer_id: dict,
-    ):
-        self.execute(
-            f"""INSERT INTO {self.sys_config["sqlite-delivery"]["table_customers"]} (
-                order_id,
-                timestamp,
-                customer_id
-            )
-            VALUES (
-                '{order_id}',
-                {timestamp_now()},
-                '{customer_id}'
-            )""",
-            commit=True,
-        )
-
-    def add_order(
-        self,
-        order_id: str,
-        order_details: dict,
-    ):
-        self.execute(
-            f"""INSERT INTO {self.sys_config["sqlite-orders"]["table_orders"]} (
-                order_id,
-                timestamp,
-                name,
-                customer_id,
-                status,
-                sauce,
-                cheese,
-                topping,
-                extras
-            )
-            VALUES (
-                '{order_id}',
-                {timestamp_now()},
-                '{order_details["order"]["name"]}',
-                '{order_details["order"]["customer_id"]}',
-                {self.sys_config["status-id"]["order_received"]},
-                '{order_details["order"]["sauce"]}',
-                '{order_details["order"]["cheese"]}',
-                '{order_details["order"]["main_topping"]}',
-                '{",".join(order_details["order"]["extra_toppings"])}'
-            )""",
-            commit=True,
-        )

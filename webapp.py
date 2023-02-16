@@ -26,7 +26,6 @@ import datetime
 from flask import Flask, render_template, request
 
 from utils import (
-    DB,
     GracefulShutdown,
     log_ini,
     save_pid,
@@ -35,6 +34,7 @@ from utils import (
     validate_cli_args,
     get_system_config,
     set_producer_consumer,
+    import_state_store_class,
 )
 
 
@@ -49,9 +49,9 @@ validate_cli_args(SCRIPT)
 
 # Get system config file
 SYS_CONFIG = get_system_config(sys.argv[2])
-PRODUCE_TOPIC = SYS_CONFIG["kafka-topics"]["pizza_ordered"]
 
 # Set producer object
+PRODUCE_TOPIC = SYS_CONFIG["kafka-topics"]["pizza_ordered"]
 PRODUCER, _ = set_producer_consumer(
     sys.argv[1],
     producer_extra_config={
@@ -63,8 +63,9 @@ PRODUCER, _ = set_producer_consumer(
 # Set signal handler
 GRACEFUL_SHUTDOWN = GracefulShutdown()
 
-# SQLite
-ORDERS_DB = SYS_CONFIG["sqlite-orders"]["db"]
+# State Store (Get DB class dynamically)
+DB = import_state_store_class(SYS_CONFIG["state-store-orders"]["db_module_class"])
+ORDERS_DB = SYS_CONFIG["state-store-orders"]["name"]
 with GRACEFUL_SHUTDOWN as _:
     with DB(
         ORDERS_DB,
@@ -72,7 +73,7 @@ with GRACEFUL_SHUTDOWN as _:
     ) as db:
         db.create_order_table()
         db.delete_past_timestamp(
-            SYS_CONFIG["sqlite-orders"]["table_orders"],
+            SYS_CONFIG["state-store-orders"]["table_orders"],
             hours=2,
         )
 
@@ -170,7 +171,7 @@ def view_orders():
             sys_config=SYS_CONFIG,
         ) as db:
             db.delete_past_timestamp(
-                SYS_CONFIG["sqlite-orders"]["table_orders"],
+                SYS_CONFIG["state-store-orders"]["table_orders"],
                 hours=2,
             )
             return render_template(

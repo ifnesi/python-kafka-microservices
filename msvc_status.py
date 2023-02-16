@@ -25,7 +25,6 @@ from threading import Thread
 
 
 from utils import (
-    DB,
     GracefulShutdown,
     log_ini,
     save_pid,
@@ -36,6 +35,7 @@ from utils import (
     log_event_received,
     get_system_config,
     set_producer_consumer,
+    import_state_store_class,
 )
 
 
@@ -50,11 +50,11 @@ validate_cli_args(SCRIPT)
 
 # Get system config file
 SYS_CONFIG = get_system_config(sys.argv[2])
+
+# Set consumer object
 CONSUME_TOPICS = [
     SYS_CONFIG["kafka-topics"]["pizza_status"],
 ]
-
-# Set consumer object
 _, CONSUMER = set_producer_consumer(
     sys.argv[1],
     disable_producer=True,
@@ -66,8 +66,9 @@ _, CONSUMER = set_producer_consumer(
 # Set signal handler
 GRACEFUL_SHUTDOWN = GracefulShutdown(consumer=CONSUMER)
 
-# SQLite
-ORDERS_DB = SYS_CONFIG["sqlite-orders"]["db"]
+# State Store (Get DB class dynamically)
+DB = import_state_store_class(SYS_CONFIG["state-store-orders"]["db_module_class"])
+ORDERS_DB = SYS_CONFIG["state-store-orders"]["name"]
 with GRACEFUL_SHUTDOWN as _:
     with DB(
         ORDERS_DB,
@@ -75,12 +76,12 @@ with GRACEFUL_SHUTDOWN as _:
     ) as db:
         db.create_order_table()
         db.delete_past_timestamp(
-            SYS_CONFIG["sqlite-orders"]["table_orders"],
+            SYS_CONFIG["state-store-orders"]["table_orders"],
             hours=2,
         )
         db.create_status_table()
         db.delete_past_timestamp(
-            SYS_CONFIG["sqlite-orders"]["table_status"],
+            SYS_CONFIG["state-store-orders"]["table_status"],
             hours=2,
         )
 
@@ -106,7 +107,7 @@ def status_watchdog():
                 )
                 # Delete order from status table (state store for statefulness)
                 db.delete_stuck_status(order_id)
-        time.sleep(SYS_CONFIG["sqlite-orders"]["status_watchdog_minutes"] * 60)
+        time.sleep(SYS_CONFIG["state-store-orders"]["status_watchdog_minutes"] * 60)
 
 
 def get_pizza_status():

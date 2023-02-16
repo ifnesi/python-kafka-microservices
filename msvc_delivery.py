@@ -22,7 +22,6 @@ import time
 import logging
 
 from utils import (
-    DB,
     GracefulShutdown,
     log_ini,
     save_pid,
@@ -33,6 +32,7 @@ from utils import (
     log_event_received,
     get_system_config,
     set_producer_consumer,
+    import_state_store_class,
 )
 
 
@@ -48,12 +48,12 @@ validate_cli_args(SCRIPT)
 
 # Get system config file
 SYS_CONFIG = get_system_config(sys.argv[2])
+
+# Set producer/consumer objects
 PRODUCE_TOPIC_STATUS = SYS_CONFIG["kafka-topics"]["pizza_status"]
 TOPIC_PIZZA_ORDERED = SYS_CONFIG["kafka-topics"]["pizza_ordered"]
 TOPIC_PIZZA_BAKED = SYS_CONFIG["kafka-topics"]["pizza_baked"]
 CONSUME_TOPICS = [TOPIC_PIZZA_ORDERED, TOPIC_PIZZA_BAKED]
-
-# Set producer/consumer objects
 validate_cli_args(SCRIPT)
 PRODUCER, CONSUMER = set_producer_consumer(
     sys.argv[1],
@@ -68,8 +68,9 @@ PRODUCER, CONSUMER = set_producer_consumer(
 # Set signal handler
 GRACEFUL_SHUTDOWN = GracefulShutdown(consumer=CONSUMER)
 
-# SQLite
-CUSTOMER_DB = SYS_CONFIG["sqlite-delivery"]["db"]
+# State Store (Get DB class dynamically)
+DB = import_state_store_class(SYS_CONFIG["state-store-orders"]["db_module_class"])
+CUSTOMER_DB = SYS_CONFIG["state-store-delivery"]["name"]
 with GRACEFUL_SHUTDOWN as _:
     with DB(
         CUSTOMER_DB,
@@ -77,7 +78,7 @@ with GRACEFUL_SHUTDOWN as _:
     ) as db:
         db.create_customer_table()
         db.delete_past_timestamp(
-            SYS_CONFIG["sqlite-delivery"]["table_customers"],
+            SYS_CONFIG["state-store-delivery"]["table_customers"],
             hours=2,
         )
 
