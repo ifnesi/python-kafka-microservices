@@ -18,7 +18,10 @@
 
 import sys
 import json
+import time
 import logging
+
+from threading import Thread
 
 
 from utils import (
@@ -65,27 +68,54 @@ GRACEFUL_SHUTDOWN = GracefulShutdown(consumer=CONSUMER)
 
 # SQLite
 ORDERS_DB = SYS_CONFIG["sqlite-orders"]["db"]
-ORDER_TABLE = SYS_CONFIG["sqlite-orders"]["table"]
 with GRACEFUL_SHUTDOWN as _:
     with DB(
         ORDERS_DB,
-        ORDER_TABLE,
         sys_config=SYS_CONFIG,
     ) as db:
         db.create_order_table()
-        db.delete_past_timestamp(hours=2)
+        db.delete_past_timestamp(
+            SYS_CONFIG["sqlite-orders"]["table_orders"],
+            hours=2,
+        )
+        db.create_status_table()
+        db.delete_past_timestamp(
+            SYS_CONFIG["sqlite-orders"]["table_status"],
+            hours=2,
+        )
 
 
 #####################
 # General functions #
 #####################
+def status_watchdog():
+    """As this microservice is stateful it's needed a way to check if any status got stuck
+    That problem could be solved using Kafka Stream or ksqlDB/Flink"""
+    while True:
+        with DB(
+            ORDERS_DB,
+            sys_config=SYS_CONFIG,
+        ) as db:
+            stuck_status = db.check_status_stuck()
+            for order_id, data in stuck_status.items():
+                logging.warning(f"Order '{order_id}' got stuck!")
+                # Update order to set status as stuck
+                db.update_order_status(
+                    order_id,
+                    SYS_CONFIG["status-id"]["stuck"],
+                )
+                # Delete order from status table (state store for statefulness)
+                db.delete_stuck_status(order_id)
+        time.sleep(SYS_CONFIG["sqlite-orders"]["status_watchdog_minutes"] * 60)
+
+
 def get_pizza_status():
     """Subscribe to pizza-status topic to update in-memory DB (order_ids dict)"""
     CONSUMER.subscribe(CONSUME_TOPICS)
     logging.info(f"Subscribed to topic(s): {', '.join(CONSUME_TOPICS)}")
     while True:
         with GRACEFUL_SHUTDOWN as _:
-            event = CONSUMER.poll(0.25)
+            event = CONSUMER.poll(1)
             if event is not None:
                 if event.error():
                     logging.error(event.error())
@@ -96,7 +126,6 @@ def get_pizza_status():
                         order_id = event.key().decode()
                         with DB(
                             ORDERS_DB,
-                            ORDER_TABLE,
                             sys_config=SYS_CONFIG,
                         ) as db:
                             order_data = db.get_order_id(
@@ -126,6 +155,21 @@ def get_pizza_status():
                                         order_id,
                                         pizza_status,
                                     )
+                                    # Add to status to check statefulness (daemon on msvc_status)
+                                    db.upsert_status(
+                                        order_id,
+                                        pizza_status,
+                                    )
+                                    # Delete order from status table (state store for statefulness)
+                                    if int(pizza_status) in (
+                                        SYS_CONFIG["status-id"]["stuck"],
+                                        SYS_CONFIG["status-id"]["cancelled"],
+                                        SYS_CONFIG["status-id"]["delivered"],
+                                        SYS_CONFIG["status-id"]["something_wrong"],
+                                        SYS_CONFIG["status-id"]["unknown"],
+                                    ):
+                                        db.delete_stuck_status(order_id)
+
                             else:
                                 logging.error(f"Order '{order_id}' not found")
 
@@ -145,6 +189,9 @@ def get_pizza_status():
 if __name__ == "__main__":
     # Save PID
     save_pid(SCRIPT)
+
+    # Order status watchdog
+    Thread(target=status_watchdog, daemon=True).start()
 
     # Start consumer
     get_pizza_status()

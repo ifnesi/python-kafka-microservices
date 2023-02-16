@@ -25,7 +25,9 @@ from configparser import ConfigParser
 from confluent_kafka import Producer, Consumer
 
 
-# Generic functions
+#####################
+# Generic functions #
+#####################
 def get_system_config(
     config_file: str = "default.ini",
     section: str = None,
@@ -56,7 +58,24 @@ def get_system_config(
         }
         for k, v in sys_config["status-id"].items():
             sys_config["status-id"][k] = int(v)
-            sys_config["status"][int(v)] = sys_config["status-label"][k]
+            sys_config["status"][int(v)] = sys_config["status-label"].get(k, "???")
+
+        # Parse status parameters
+        status_completed_when = parse_list(
+            sys_config["sqlite-orders"]["status_completed_when"]
+        )
+        sys_config["sqlite-orders"]["status_completed_when"] = list()
+        for status in status_completed_when:
+            sys_config["sqlite-orders"]["status_completed_when"].append(
+                int(sys_config["status-id"][status])
+            )
+
+        sys_config["sqlite-orders"]["status_watchdog_minutes"] = float(
+            sys_config["sqlite-orders"]["status_watchdog_minutes"]
+        )
+        sys_config["sqlite-orders"]["status_invalid_timeout_minutes"] = float(
+            sys_config["sqlite-orders"]["status_invalid_timeout_minutes"]
+        )
 
         # Filter by section (if required)
         if section is not None:
@@ -67,6 +86,7 @@ def get_system_config(
             f"Unable to parse system configuration file: {file_name}",
             sys.exc_info(),
         )
+        sys.exit(0)
 
     return sys_config
 
@@ -209,7 +229,13 @@ def delivery_report(err, msg):
         )
 
 
-# Generic classes
+def timestamp_now() -> int:
+    return int(datetime.datetime.now().timestamp() * 1000)
+
+
+###################
+# Generic classes #
+###################
 class GracefulShutdown:
     """Class/context manager to manage graceful shutdown"""
 
@@ -256,11 +282,9 @@ class DB:
     def __init__(
         self,
         db_name: str,
-        table_name: str,
         sys_config: dict = None,
     ):
         self.db_name = db_name
-        self.table_name = table_name
         self.sys_config = sys_config
         self.conn = None
         self.cur = None
@@ -279,17 +303,17 @@ class DB:
 
     def create_customer_table(self):
         self.execute(
-            f"""CREATE TABLE IF NOT EXISTS {self.table_name} (
+            f"""CREATE TABLE IF NOT EXISTS {self.sys_config["sqlite-delivery"]["table_customers"]} (
                 order_id TEXT PRIMARY KEY,
                 timestamp INTEGER,
                 customer_id TEXT
-            )"""
+            )""",
+            commit=True,
         )
-        self.conn.commit()
 
     def create_order_table(self):
         self.execute(
-            f"""CREATE TABLE IF NOT EXISTS {self.table_name} (
+            f"""CREATE TABLE IF NOT EXISTS {self.sys_config["sqlite-orders"]["table_orders"]} (
                 order_id TEXT PRIMARY KEY,
                 timestamp INTEGER,
                 name TEXT,
@@ -299,25 +323,84 @@ class DB:
                 cheese TEXT,
                 topping TEXT,
                 extras TEXT
-            )"""
+            )""",
+            commit=True,
         )
-        self.conn.commit()
 
-    def delete_past_timestamp(self, hours: int = 1):
+    def create_status_table(self):
         self.execute(
-            f"""DELETE FROM {self.table_name}
-            WHERE timestamp < {int(datetime.datetime.now().timestamp() * 1000) - hours * 60 * 60 * 1000}"""
+            f"""CREATE TABLE IF NOT EXISTS {self.sys_config["sqlite-orders"]["table_status"]} (
+                order_id TEXT PRIMARY KEY,
+                timestamp INTEGER,
+                status INTEGER
+            )""",
+            commit=True,
         )
-        self.conn.commit()
 
-    def execute(self, expression: str):
-        return self.cur.execute(expression)
+    def check_status_stuck(self) -> dict:
+        self.execute(
+            f"""SELECT * FROM {self.sys_config["sqlite-orders"]["table_status"]}
+                WHERE
+                    timestamp < {timestamp_now() - self.sys_config["sqlite-orders"]["status_invalid_timeout_minutes"] * 60 * 1000}
+                    AND status NOT IN ({",".join([str(s) for s in self.sys_config["sqlite-orders"]["status_completed_when"]])})
+            """,
+            commit=False,
+        )
+        data = self.cur.fetchall()
+        data_all = dict()
+        if data:
+            cols = list(map(lambda x: x[0], self.cur.description))
+            for item in data:
+                item = dict(zip(cols, item))
+                data_all[item["order_id"]] = {
+                    "status": item["status"],
+                    "timestamp": item["timestamp"],
+                }
+        return data_all
+
+    def delete_stuck_status(self, order_id: str):
+        self.execute(
+            f"""DELETE FROM {self.sys_config["sqlite-orders"]["table_status"]}
+                WHERE
+                    order_id = '{order_id}'
+            """,
+            commit=True,
+        )
+
+    def delete_past_timestamp(
+        self,
+        table_name: str,
+        timestamp_field: str = "timestamp",
+        hours: int = 1,
+    ):
+        self.execute(
+            f"""DELETE FROM {table_name}
+            WHERE
+                {timestamp_field} < {timestamp_now() - hours * 60 * 60 * 1000}
+            """,
+            commit=True,
+        )
+
+    def execute(
+        self,
+        expression: str,
+        commit: bool = False,
+    ):
+        result = self.cur.execute(expression)
+        if commit:
+            self.conn.commit()
+        return result
 
     def get_order_id_customer(
         self,
         order_id: str,
     ) -> dict:
-        self.execute(f"SELECT * FROM {self.table_name} WHERE order_id='{order_id}'")
+        self.execute(
+            f"""SELECT * FROM {self.sys_config["sqlite-delivery"]["table_customers"]}
+                WHERE
+                    order_id='{order_id}'""",
+            commit=False,
+        )
         data = self.cur.fetchone()
         if data is not None:
             cols = list(map(lambda x: x[0], self.cur.description))
@@ -328,7 +411,12 @@ class DB:
         self,
         order_id: str,
     ) -> dict:
-        self.execute(f"SELECT * FROM {self.table_name} WHERE order_id='{order_id}'")
+        self.execute(
+            f"""SELECT * FROM {self.sys_config["sqlite-orders"]["table_orders"]}
+                WHERE
+                    order_id='{order_id}'""",
+            commit=False,
+        )
         data = self.cur.fetchone()
         if data is not None:
             cols = list(map(lambda x: x[0], self.cur.description))
@@ -342,7 +430,10 @@ class DB:
     def get_orders(
         self,
     ) -> dict:
-        self.execute(f"SELECT * FROM {self.table_name} ORDER BY timestamp DESC")
+        self.execute(
+            f"""SELECT * FROM {self.sys_config["sqlite-orders"]["table_orders"]} ORDER BY timestamp DESC""",
+            commit=False,
+        )
         data = self.cur.fetchall()
         data_all = dict()
         if data:
@@ -372,12 +463,36 @@ class DB:
         status: int,
     ):
         self.execute(
-            f"""UPDATE {self.table_name} SET
+            f"""UPDATE {self.sys_config["sqlite-orders"]["table_orders"]} SET
                     status={status}
-                WHERE order_id='{order_id}'
-            """
+                WHERE
+                    order_id='{order_id}'
+            """,
+            commit=True,
         )
-        self.conn.commit()
+
+    def upsert_status(
+        self,
+        order_id: str,
+        status: int,
+    ):
+        self.execute(
+            f"""INSERT INTO {self.sys_config["sqlite-orders"]["table_status"]} (
+                order_id,
+                timestamp,
+                status
+            ) VALUES (
+                '{order_id}',
+                {timestamp_now()},
+                {status}
+            ) ON CONFLICT (order_id) DO UPDATE SET
+                timestamp={timestamp_now()},
+                status={status}
+            WHERE
+                order_id='{order_id}'
+            """,
+            commit=True,
+        )
 
     def update_customer(
         self,
@@ -385,13 +500,14 @@ class DB:
         customer_id: dict,
     ):
         self.execute(
-            f"""UPDATE {self.table_name} SET
-                    timestamp={int(datetime.datetime.now().timestamp() * 1000)},
+            f"""UPDATE {self.sys_config["sqlite-delivery"]["table_customers"]} SET
+                    timestamp={timestamp_now()},
                     customer_id='{customer_id}'
-                WHERE order_id='{order_id}'
-            """
+                WHERE
+                    order_id='{order_id}'
+            """,
+            commit=True,
         )
-        self.conn.commit()
 
     def add_customer(
         self,
@@ -399,18 +515,18 @@ class DB:
         customer_id: dict,
     ):
         self.execute(
-            f"""INSERT INTO {self.table_name} (
+            f"""INSERT INTO {self.sys_config["sqlite-delivery"]["table_customers"]} (
                 order_id,
                 timestamp,
                 customer_id
             )
             VALUES (
                 '{order_id}',
-                {int(datetime.datetime.now().timestamp() * 1000)},
+                {timestamp_now()},
                 '{customer_id}'
-            )"""
+            )""",
+            commit=True,
         )
-        self.conn.commit()
 
     def add_order(
         self,
@@ -418,7 +534,7 @@ class DB:
         order_details: dict,
     ):
         self.execute(
-            f"""INSERT INTO {self.table_name} (
+            f"""INSERT INTO {self.sys_config["sqlite-orders"]["table_orders"]} (
                 order_id,
                 timestamp,
                 name,
@@ -431,7 +547,7 @@ class DB:
             )
             VALUES (
                 '{order_id}',
-                {int(datetime.datetime.now().timestamp() * 1000)},
+                {timestamp_now()},
                 '{order_details["order"]["name"]}',
                 '{order_details["order"]["customer_id"]}',
                 {self.sys_config["status-id"]["order_received"]},
@@ -439,6 +555,6 @@ class DB:
                 '{order_details["order"]["cheese"]}',
                 '{order_details["order"]["main_topping"]}',
                 '{",".join(order_details["order"]["extra_toppings"])}'
-            )"""
+            )""",
+            commit=True,
         )
-        self.conn.commit()

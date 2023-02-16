@@ -65,15 +65,16 @@ GRACEFUL_SHUTDOWN = GracefulShutdown()
 
 # SQLite
 ORDERS_DB = SYS_CONFIG["sqlite-orders"]["db"]
-ORDER_TABLE = SYS_CONFIG["sqlite-orders"]["table"]
 with GRACEFUL_SHUTDOWN as _:
     with DB(
         ORDERS_DB,
-        ORDER_TABLE,
         sys_config=SYS_CONFIG,
     ) as db:
         db.create_order_table()
-        db.delete_past_timestamp(hours=2)
+        db.delete_past_timestamp(
+            SYS_CONFIG["sqlite-orders"]["table_orders"],
+            hours=2,
+        )
 
 # Webapp (Flask)
 app = Flask(
@@ -131,12 +132,16 @@ def order_pizza():
         # Add order to DB
         with DB(
             ORDERS_DB,
-            ORDER_TABLE,
             sys_config=SYS_CONFIG,
         ) as db:
             db.add_order(
                 order_id,
                 order_details,
+            )
+            # Add to status to check statefulness (daemon on msvc_status)
+            db.upsert_status(
+                order_id,
+                SYS_CONFIG["status-id"]["order_received"],
             )
 
         # Produce to kafka topic
@@ -162,10 +167,12 @@ def view_orders():
     with GRACEFUL_SHUTDOWN as _:
         with DB(
             ORDERS_DB,
-            ORDER_TABLE,
             sys_config=SYS_CONFIG,
         ) as db:
-            db.delete_past_timestamp(hours=2)
+            db.delete_past_timestamp(
+                SYS_CONFIG["sqlite-orders"]["table_orders"],
+                hours=2,
+            )
             return render_template(
                 "view_orders.html",
                 title="Orders",
@@ -179,7 +186,6 @@ def get_order_ajax(order_id):
     with GRACEFUL_SHUTDOWN as _:
         with DB(
             ORDERS_DB,
-            ORDER_TABLE,
             sys_config=SYS_CONFIG,
         ) as db:
             order_details = db.get_order_id(order_id)
@@ -197,7 +203,6 @@ def get_order(order_id):
     with GRACEFUL_SHUTDOWN as _:
         with DB(
             ORDERS_DB,
-            ORDER_TABLE,
             sys_config=SYS_CONFIG,
         ) as db:
             order_details = db.get_order_id(order_id)
