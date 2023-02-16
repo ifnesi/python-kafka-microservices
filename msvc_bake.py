@@ -103,7 +103,7 @@ def receive_pizza_assembled():
     logging.info(f"Subscribed to topic(s): {', '.join(CONSUME_TOPICS)}")
     while True:
         with GRACEFUL_SHUTDOWN as _:
-            event = CONSUMER.poll(0.25)
+            event = CONSUMER.poll(1)
             if event is not None:
                 if event.error():
                     logging.error(event.error())
