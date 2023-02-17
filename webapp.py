@@ -16,7 +16,6 @@
 
 # Flask webapp
 
-import sys
 import json
 import uuid
 import hashlib
@@ -43,6 +42,7 @@ from utils import (
 ####################
 SCRIPT = get_script_name(__file__)
 log_ini(SCRIPT)
+next_delete_past_timestamp = datetime.datetime.now()
 
 # Validate command arguments
 kafka_config_file, sys_config_file = validate_cli_args(SCRIPT)
@@ -75,7 +75,7 @@ with GRACEFUL_SHUTDOWN as _:
         db.create_order_table()
         db.delete_past_timestamp(
             SYS_CONFIG["state-store-orders"]["table_orders"],
-            hours=2,
+            hours=int(SYS_CONFIG["state-store-orders"]["table_orders_retention_hours"]),
         )
 
 # Webapp (Flask)
@@ -166,15 +166,24 @@ def order_pizza():
 @app.route("/orders", methods=["GET"])
 def view_orders():
     """View all orders"""
+    global next_delete_past_timestamp
+
     with GRACEFUL_SHUTDOWN as _:
         with DB(
             ORDERS_DB,
             sys_config=SYS_CONFIG,
         ) as db:
-            db.delete_past_timestamp(
-                SYS_CONFIG["state-store-orders"]["table_orders"],
-                hours=2,
-            )
+            if next_delete_past_timestamp < datetime.datetime.now():
+                # Only go through that cycle every 60 seconds
+                next_delete_past_timestamp = (
+                    datetime.datetime.now() + datetime.timedelta(seconds=60)
+                )
+                db.delete_past_timestamp(
+                    SYS_CONFIG["state-store-orders"]["table_orders"],
+                    hours=int(
+                        SYS_CONFIG["state-store-orders"]["table_orders_retention_hours"]
+                    ),
+                )
             return render_template(
                 "view_orders.html",
                 title="Orders",
