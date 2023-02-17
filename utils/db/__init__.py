@@ -19,25 +19,43 @@ from abc import ABC, abstractmethod
 
 class BaseStateStore(ABC):
     @abstractmethod
-    def create_customer_table(self):
+    def create_customer_table(
+        self,
+        *args,
+        **kwargs,
+    ):
         pass
 
     @abstractmethod
-    def create_order_table(self):
+    def create_order_table(
+        self,
+        *args,
+        **kwargs,
+    ):
         pass
 
     @abstractmethod
-    def create_status_table(self):
+    def create_status_table(
+        self,
+        *args,
+        **kwargs,
+    ):
         pass
 
     @abstractmethod
-    def check_status_stuck(self) -> dict:
+    def check_status_stuck(
+        self,
+        *args,
+        **kwargs,
+    ) -> dict:
         pass
 
     @abstractmethod
     def delete_stuck_status(
         self,
         order_id: str,
+        *args,
+        **kwargs,
     ):
         pass
 
@@ -45,8 +63,10 @@ class BaseStateStore(ABC):
     def delete_past_timestamp(
         self,
         table_name: str,
+        *args,
         timestamp_field: str = "timestamp",
         hours: int = 1,
+        **kwargs,
     ):
         pass
 
@@ -54,6 +74,8 @@ class BaseStateStore(ABC):
     def get_order_id_customer(
         self,
         order_id: str,
+        *args,
+        **kwargs,
     ) -> dict:
         pass
 
@@ -61,12 +83,16 @@ class BaseStateStore(ABC):
     def get_order_id(
         self,
         order_id: str,
+        *args,
+        **kwargs,
     ) -> dict:
         pass
 
     @abstractmethod
     def get_orders(
         self,
+        *args,
+        **kwargs,
     ) -> dict:
         pass
 
@@ -75,6 +101,8 @@ class BaseStateStore(ABC):
         self,
         order_id: str,
         status: int,
+        *args,
+        **kwargs,
     ):
         pass
 
@@ -83,6 +111,8 @@ class BaseStateStore(ABC):
         self,
         order_id: str,
         status: int,
+        *args,
+        **kwargs,
     ):
         pass
 
@@ -91,6 +121,8 @@ class BaseStateStore(ABC):
         self,
         order_id: str,
         customer_id: dict,
+        *args,
+        **kwargs,
     ):
         pass
 
@@ -99,6 +131,8 @@ class BaseStateStore(ABC):
         self,
         order_id: str,
         customer_id: dict,
+        *args,
+        **kwargs,
     ):
         pass
 
@@ -107,5 +141,7 @@ class BaseStateStore(ABC):
         self,
         order_id: str,
         order_details: dict,
+        *args,
+        **kwargs,
     ):
         pass
