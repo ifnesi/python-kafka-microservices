@@ -38,7 +38,8 @@ This pizza takeaway shop ecosystem was designed using Python and made simple for
   - Bake the pizza (```msvc_bake.py```)
   - Have it delivered (```msvc_delivery.py```)
   - Process status (```msvc_status.py```): Whenever one of the previous microservices complete their task they will communicate with this microservice so it can update the web application. This microservice will be the Query portion of the CQRS pattern. It will have the materialised views stored in the aforementioned SQLite3 state store*
-- All interprocess communication is via an Apache Kafka cluster<br>
+- All interprocess communication is via an Apache Kafka cluster
+
 (*) By default SQLite3 will be used, but that can be changed via system configuration file (default is ```'config_sys/default.ini'```) by setting a different python class (the base/abstract class is defined on utils.db, class name is ```BaseStateStore```), see below the default system configuration:
 ```
 [state-store-orders]
@@ -67,11 +68,20 @@ Confluent Cloud Stream Lineage view:
 - Activate the virtual environment: ```source _venv/bin/activate```
 - Install project requirements: ```python3 -m pip install -f requirements.txt```
 - Deactivate the virtual environment: ```deactivate```
-- Access your Apache Kafka cluster and create the following topics (with any number of partitions, it will not matter for this project):
+- Access your Apache Kafka cluster and create the following topics* (with any number of partitions, it will not matter for this project):
   - pizza-ordered
   - pizza-assembled
   - pizza-baked
   - pizza-status
+
+(*) That can be changed via system configuration file (default is ```'config_sys/default.ini'```):
+```
+[kafka-topics]
+pizza_status = pizza-status
+pizza_ordered = pizza-ordered
+pizza_assembled = pizza-assembled
+pizza_baked = pizza-baked
+```
 
 ### Running the webapp and microservices
 - Activate the virtual environment: ```source _venv/bin/activate```
@@ -104,7 +114,7 @@ Confluent Cloud Stream Lineage view:
 Should you want to try it out on your own and run it all locally, you will need to have Docker installed, then:
 - Run ```docker-compose up -d```
 - Wait until the images are downloaded and the containers are up and running (1x Zookeeper server, 1x Kafka broker, 1x Schema Registry and 1x Confluent Control Center)
-- Set the ```{KAFKA_CONFIG_FILE}``` as ```localhost.ini```
+- Set ```{KAFKA_CONFIG_FILE}``` as ```localhost.ini```
 - Then, follow the steps on the previous section to get the demo up and running
 - Don't forget to create the topics before starting the demo! To do so and see the events, go to http://127.0.0.1:9021 (it takes a minute or so once all containers are up)
 - Once done with it, stop your docker containers: ```docker-compose down```
@@ -112,6 +122,7 @@ Should you want to try it out on your own and run it all locally, you will need 
 ### Using the webapp and of chronology of events
 1. After starting all scripts and accessing the landing page (http://127.0.0.1:8000), customise your pizza and submit your order:
 ![image](docs/webapp_menu.png)
+
 2. Once the order is submitted the webapp will produce an event to the Kafka topic ```pizza-ordered```:
 ```
 (webapp) INFO 21:00:39.603 - Event successfully produced
@@ -119,13 +130,16 @@ Should you want to try it out on your own and run it all locally, you will need 
  - Key: b32ad
  - Value: {"status": 100, "timestamp": 1676235639159, "order": {"extra_toppings": ["Mushroom", "Black olives", "Green pepper"], "customer_id": "d94a6c43d9f487c1bef659f05c002213", "name": "Italo", "sauce": "Tomato", "cheese": "Mozzarella", "main_topping": "Pepperoni"}}
  ```
+
 3. The webapp will display the confirmation of the order:
 ![image](docs/webapp_order_confirmation.png)
+
 4. The microservice **Deliver Pizza** (step 1/2) receives early warning about a new order by subscribing to topic ```pizza-ordered```. In a real life scenario it would get the ```customer_id``` data and query its data store (e.g., ksqlDB/Flink) and fetch the delivery address:
 ```
 (msvc_delivery) INFO 21:00:18.516 - Subscribed to topic(s): pizza-ordered, pizza-baked
 (msvc_delivery) INFO 21:00:39.609 - Early warning to deliver order 'b32ad' to customer_id 'd94a6c43d9f487c1bef659f05c002213'
 ```
+
 5. The microservice **Assemble Pizza**, which is subscribed to the topic ```pizza-ordered```, receives the order and starts assembling the pizza. It will also estimate the baking time based on the ingredients chosen. Once the pizza is assembled, it will produce an event to the topic ```pizza-assembled``` as well as another to the topic ```pizza-status```:
 ```
 (msvc_assemble) INFO 21:00:08.500 - Subscribed to topic(s): pizza-ordered
@@ -140,11 +154,13 @@ Should you want to try it out on your own and run it all locally, you will need 
  - Key: b32ad
  - Value: {"status": 200}
  ```
+
 6. The microservice **Process Status**, which is subscribed to the topic ```pizza-status```, receives the status change event and update the database with a materialised view of the status of the order:
 ```
 (msvc_status) INFO 21:00:12.579 - Subscribed to topic(s): pizza-status
 (msvc_status) INFO 21:00:44.851 - Order 'b32ad' status updated: Your pizza is in the oven (200)
  ```
+
 7. The microservice **Bake Pizza**, which is subscribed to the topic ```pizza-assembled```, receives the notification the pizza is assembled along with the baking time, then it bakes the pizza accordingly. Once the pizza is baked, it will produce an event to the topic ```pizza-baked``` as well as another to the topic ```pizza-status```:
 ```
 (msvc_bake) INFO 21:00:15.319 - Subscribed to topic(s): pizza-assembled
@@ -159,11 +175,13 @@ Should you want to try it out on your own and run it all locally, you will need 
  - Key: b32ad
  - Value: {"status": 300}
 ```
+
 8. The microservice **Process Status**, which is subscribed to the topic ```pizza-status```, receives the status change event and update the database with a materialised view of the status of the order:
 ```
 (msvc_status) INFO 21:00:12.579 - Subscribed to topic(s): pizza-status
 (msvc_status) INFO 21:01:02.647 - Order 'b32ad' status updated: Your pizza is out for delivery (300)
  ```
+
 9. The microservice **Deliver Pizza** (step 2/2), which is subscribed to the topic ```pizza-baked```, receives the notification the pizza is baked, then it delivers the pizza. It already had time to plan the delivery as it got an early warning as soon as the order was placed. Once the pizza is delivered, it will produce an event to the topic ```pizza-status```:
 ```
 (msvc_delivery) INFO 21:00:18.516 - Subscribed to topic(s): pizza-ordered, pizza-baked
@@ -174,11 +192,13 @@ Should you want to try it out on your own and run it all locally, you will need 
  - Key: b32ad
  - Value: {"status": 400}
 ```
+
 10. The microservice **Process Status**, which is subscribed to the topic ```pizza-status```, receives the status change event and update the database with a materialised view of the status of the order:
 ```
 (msvc_status) INFO 21:00:12.579 - Subscribed to topic(s): pizza-status
 (msvc_status) INFO 21:01:12.902 - Order 'b32ad' status updated: Your pizza was delivered (400)
 ```
+
 11. The flow is completed and, hopefully, we now have a happy customer for getting a delicious and nutricious pizza in such fast manner. The webapp, if on the order status page (in this case http://127.0.0.1:8000/orders/b32ad) will display in real time the status of the pizza, all of that thanks to the CQRS pattern. In a real life scenario that could be easily achieved by using frameworks such as ReactJS, however in this project it is used JQuery/AJAX async calls to accomplish that:
 ![image](docs/webapp_order_delivered.png)
 
