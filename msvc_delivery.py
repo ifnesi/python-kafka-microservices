@@ -80,7 +80,9 @@ with GRACEFUL_SHUTDOWN as _:
         db.create_customer_table()
         db.delete_past_timestamp(
             SYS_CONFIG["state-store-delivery"]["table_customers"],
-            hours=2,
+            hours=int(
+                SYS_CONFIG["state-store-delivery"]["table_customers_retention_hours"]
+            ),
         )
 
 

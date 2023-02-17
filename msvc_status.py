@@ -78,12 +78,12 @@ with GRACEFUL_SHUTDOWN as _:
         db.create_order_table()
         db.delete_past_timestamp(
             SYS_CONFIG["state-store-orders"]["table_orders"],
-            hours=2,
+            hours=int(SYS_CONFIG["state-store-orders"]["table_orders_retention_hours"]),
         )
         db.create_status_table()
         db.delete_past_timestamp(
             SYS_CONFIG["state-store-orders"]["table_status"],
-            hours=2,
+            hours=int(SYS_CONFIG["state-store-orders"]["table_status_retention_hours"]),
         )
 
 
