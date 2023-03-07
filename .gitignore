@@ -12,3 +12,5 @@ config_kafka/*
 
 config_sys/*
 !config_sys/default.ini
+
+test*.py

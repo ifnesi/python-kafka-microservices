@@ -23,6 +23,9 @@ import importlib
 
 from configparser import ConfigParser
 from confluent_kafka import Producer, Consumer
+from confluent_kafka.admin import AdminClient
+
+from utils.murmur2 import Murmur2Partitioner
 
 
 ####################
@@ -207,7 +210,6 @@ def set_producer_consumer(
     # Read configuration file
     config_parser = ConfigParser(interpolation=None)
     config_parser.read_file(open(kafka_config_file, "r"))
-
     config_kafka = dict(config_parser["kafka"])
 
     # Set producer config
@@ -238,10 +240,28 @@ def set_producer_consumer(
     else:
         consumer = None
 
+    # Set admin client
+    admin_client = AdminClient(config_kafka)
+
     return (
         producer,
         consumer,
+        admin_client,
     )
+
+
+def get_topic_partitions(admin_client, topic_name: str) -> int:
+    partitions = admin_client.list_topics(topic_name).topics.get(topic_name)
+    if partitions is not None:
+        partitions = len(partitions.partitions)
+    else:
+        partitions = 1
+    return partitions
+
+
+def get_custom_partitioner():
+    p = Murmur2Partitioner()
+    return p.partition
 
 
 def delivery_report(err, msg):

@@ -49,6 +49,8 @@ db_module_class = utils.db.sqlite
 db_module_class = utils.db.sqlite
 ```
 
+IMPORTANT: In ordert to keep consistency with Java based clients (using murmur2 partitioner), the producers will also set the topic partition using the murmur2 hash function, other than the standard CRC32 on librdkafka.
+
 Webapp and four microservices in action:
 ![image](docs/service_flow.png)
 
@@ -64,7 +66,7 @@ Confluent Cloud Stream Lineage view:
 - Install python virtual environment: ```python3 -m pip install venv```
 - Clone this repo: ```git clone git@github.com:ifnesi/python-kafka-microservices.git```
 - Go to the folder where the repo was cloned: ```cd python-kafka-microservices```
-- Create a virtual environment: ```python3 venv _venv```
+- Create a virtual environment: ```python3 -m venv _venv```
 - Activate the virtual environment: ```source _venv/bin/activate```
 - Install project requirements: ```python3 -m pip install -f requirements.txt```
 - Deactivate the virtual environment: ```deactivate```

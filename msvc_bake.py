@@ -31,7 +31,9 @@ from utils import (
     validate_cli_args,
     log_event_received,
     get_system_config,
+    get_topic_partitions,
     set_producer_consumer,
+    get_custom_partitioner,
 )
 
 
@@ -48,12 +50,12 @@ kafka_config_file, sys_config_file = validate_cli_args(SCRIPT)
 SYS_CONFIG = get_system_config(sys_config_file)
 
 # Set producer/consumer objects
-PRODUCE_TOPIC_STATUS = SYS_CONFIG["kafka-topics"]["pizza_status"]
 PRODUCE_TOPIC_BAKED = SYS_CONFIG["kafka-topics"]["pizza_baked"]
+PRODUCE_TOPIC_STATUS = SYS_CONFIG["kafka-topics"]["pizza_status"]
 CONSUME_TOPICS = [
     SYS_CONFIG["kafka-topics"]["pizza_assembled"],
 ]
-PRODUCER, CONSUMER = set_producer_consumer(
+PRODUCER, CONSUMER, ADMIN_CLIENT = set_producer_consumer(
     kafka_config_file,
     producer_extra_config={
         "on_delivery": delivery_report,
@@ -64,6 +66,9 @@ PRODUCER, CONSUMER = set_producer_consumer(
         "client.id": SYS_CONFIG["kafka-client-id"]["microservice_baked"],
     },
 )
+CUSTOM_PARTITIONER = get_custom_partitioner()
+PARTITIONS_BAKED = get_topic_partitions(ADMIN_CLIENT, PRODUCE_TOPIC_BAKED)
+PARTITIONS_STATUS = get_topic_partitions(ADMIN_CLIENT, PRODUCE_TOPIC_STATUS)
 
 # Set signal handler
 GRACEFUL_SHUTDOWN = GracefulShutdown(consumer=CONSUMER)
@@ -78,6 +83,7 @@ def pizza_baked(order_id: str):
         PRODUCER.produce(
             PRODUCE_TOPIC_BAKED,
             key=order_id,
+            partition=CUSTOM_PARTITIONER(order_id.encode(), PARTITIONS_BAKED),
         )
         PRODUCER.flush()
 
@@ -96,6 +102,7 @@ def update_pizza_status(
                     "status": status,
                 }
             ).encode(),
+            partition=CUSTOM_PARTITIONER(order_id.encode(), PARTITIONS_STATUS),
         )
         PRODUCER.flush()
 
