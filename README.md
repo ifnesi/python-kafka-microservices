@@ -63,12 +63,12 @@ Confluent Cloud Stream Lineage view:
 
 ### Installation and Configuration
 - SQLite3 and Python +3.8 required
-- Install python virtual environment: ```python3 -m pip install venv```
+- Install python virtual environment: ```python3 -m pip install venv``` or ```python3 -m pip install virtualenv```
 - Clone this repo: ```git clone git@github.com:ifnesi/python-kafka-microservices.git```
 - Go to the folder where the repo was cloned: ```cd python-kafka-microservices```
 - Create a virtual environment: ```python3 -m venv _venv```
 - Activate the virtual environment: ```source _venv/bin/activate```
-- Install project requirements: ```python3 -m pip install -f requirements.txt```
+- Install project requirements: ```python3 -m pip install -r requirements.txt```
 - Run script to create topics*/ksqlDB streams: ```python3 run_me_first.py {KAFKA_CONFIG_FILE} {SYS_CONFIG_FILE}```
 - Deactivate the virtual environment: ```deactivate```
   - ```{SYS_CONFIG_FILE}``` is a system configuration file, this file must be located under the folder ```config_sys/``` (default file is ```default.ini```)
