@@ -26,13 +26,15 @@ from utils import (
     log_ini,
     save_pid,
     log_exception,
+    timestamp_now,
     delivery_report,
     get_script_name,
+    get_system_config,
     validate_cli_args,
     log_event_received,
-    get_system_config,
-    set_producer_consumer,
+    # update_pizza_status,
     get_topic_partitions,
+    set_producer_consumer,
     get_custom_partitioner,
     import_state_store_class,
 )
@@ -52,11 +54,13 @@ kafka_config_file, sys_config_file = validate_cli_args(SCRIPT)
 SYS_CONFIG = get_system_config(sys_config_file)
 
 # Set producer/consumer objects
+PRODUCE_TOPIC_DELIVERED = SYS_CONFIG["kafka-topics"]["pizza_delivered"]
+PRODUCE_TOPIC_PENDING = SYS_CONFIG["kafka-topics"]["pizza_pending"]
 PRODUCE_TOPIC_STATUS = SYS_CONFIG["kafka-topics"]["pizza_status"]
 TOPIC_PIZZA_ORDERED = SYS_CONFIG["kafka-topics"]["pizza_ordered"]
 TOPIC_PIZZA_BAKED = SYS_CONFIG["kafka-topics"]["pizza_baked"]
 CONSUME_TOPICS = [TOPIC_PIZZA_ORDERED, TOPIC_PIZZA_BAKED]
-PRODUCER, CONSUMER, ADMIN_CLIENT = set_producer_consumer(
+_, PRODUCER, CONSUMER, ADMIN_CLIENT = set_producer_consumer(
     kafka_config_file,
     producer_extra_config={
         "on_delivery": delivery_report,
@@ -68,6 +72,8 @@ PRODUCER, CONSUMER, ADMIN_CLIENT = set_producer_consumer(
     },
 )
 CUSTOM_PARTITIONER = get_custom_partitioner()
+PARTITIONS_DELIVERED = get_topic_partitions(ADMIN_CLIENT, PRODUCE_TOPIC_DELIVERED)
+PARTITIONS_PENDING = get_topic_partitions(ADMIN_CLIENT, PRODUCE_TOPIC_PENDING)
 PARTITIONS_STATUS = get_topic_partitions(ADMIN_CLIENT, PRODUCE_TOPIC_STATUS)
 
 # Set signal handler
@@ -93,23 +99,34 @@ with GRACEFUL_SHUTDOWN as _:
 #####################
 # General functions #
 #####################
-def update_pizza_status(
-    order_id: str,
-    status: int,
-):
-    with GRACEFUL_SHUTDOWN as _:
-        # Produce to kafka topic
-        PRODUCER.produce(
-            PRODUCE_TOPIC_STATUS,
-            key=order_id,
-            value=json.dumps(
-                {
-                    "status": status,
-                }
-            ).encode(),
-            partition=CUSTOM_PARTITIONER(order_id.encode(), PARTITIONS_STATUS),
-        )
-        PRODUCER.flush()
+def pizza_delivered(order_id: str):
+    PRODUCER.produce(
+        PRODUCE_TOPIC_DELIVERED,
+        key=order_id,
+        value=json.dumps(
+            {
+                "status": SYS_CONFIG["status-id"]["delivered"],
+                "timestamp": timestamp_now(),
+            }
+        ).encode(),
+        partition=CUSTOM_PARTITIONER(order_id.encode(), PARTITIONS_DELIVERED),
+    )
+    PRODUCER.flush()
+
+
+def pizza_pending(order_id: str):
+    PRODUCER.produce(
+        PRODUCE_TOPIC_PENDING,
+        key=order_id,
+        value=json.dumps(
+            {
+                "status": SYS_CONFIG["status-id"]["pending"],
+                "timestamp": timestamp_now(),
+            }
+        ).encode(),
+        partition=CUSTOM_PARTITIONER(order_id.encode(), PARTITIONS_PENDING),
+    )
+    PRODUCER.flush()
 
 
 def receive_pizza_baked():
@@ -126,10 +143,15 @@ def receive_pizza_baked():
         time.sleep(delivery_time)
         logging.info(f"Order '{order_id}' delivered to customer_id '{customer_id}'")
         # Update kafka topics (pizza delivered)
-        update_pizza_status(
-            order_id,
-            SYS_CONFIG["status-id"]["delivered"],
-        )
+        pizza_delivered(order_id)
+        # update_pizza_status(
+        #     PRODUCER,
+        #     CUSTOM_PARTITIONER,
+        #     PRODUCE_TOPIC_STATUS,
+        #     PARTITIONS_DELIVERED,
+        #     order_id,
+        #     SYS_CONFIG["status-id"]["delivered"],
+        # )
 
     CONSUMER.subscribe(CONSUME_TOPICS)
     logging.info(f"Subscribed to topic(s): {', '.join(CONSUME_TOPICS)}")
@@ -215,11 +237,18 @@ def receive_pizza_baked():
                                 logging.warning(
                                     f"customer_id not associated to any order or invalid order '{order_id or ''}'"
                                 )
+
                                 # Update kafka topics (error with order)
-                                update_pizza_status(
-                                    order_id,
-                                    SYS_CONFIG["status-id"]["pending"],
-                                )
+                                pizza_pending(order_id)
+                                # update_pizza_status(
+                                #     PRODUCER,
+                                #     CUSTOM_PARTITIONER,
+                                #     PRODUCE_TOPIC_STATUS,
+                                #     PARTITIONS_PENDING,
+                                #     order_id,
+                                #     SYS_CONFIG["status-id"]["pending"],
+                                # )
+
                                 # Add order_id to the DB as "pending", that happens when the early notification (for some reason) arrives after the notification the pizza is baked
                                 with DB(
                                     CUSTOMER_DB,

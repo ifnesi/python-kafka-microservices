@@ -303,7 +303,7 @@ class DB(BaseStateStore):
                 {timestamp_now()},
                 '{order_details["order"]["name"]}',
                 '{order_details["order"]["customer_id"]}',
-                {self.sys_config["status-id"]["order_received"]},
+                {self.sys_config["status-id"]["order_placed"]},
                 '{order_details["order"]["sauce"]}',
                 '{order_details["order"]["cheese"]}',
                 '{order_details["order"]["main_topping"]}',

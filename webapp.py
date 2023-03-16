@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Flask webapp
+# Web application
 
 import json
 import uuid
@@ -30,6 +30,7 @@ from utils import (
     save_pid,
     get_script_name,
     delivery_report,
+    timestamp_now,
     validate_cli_args,
     get_system_config,
     set_producer_consumer,
@@ -54,7 +55,7 @@ SYS_CONFIG = get_system_config(sys_config_file)
 
 # Set producer object
 PRODUCE_TOPIC_ORDERED = SYS_CONFIG["kafka-topics"]["pizza_ordered"]
-PRODUCER, _, ADMIN_CLIENT = set_producer_consumer(
+_, PRODUCER, _, ADMIN_CLIENT = set_producer_consumer(
     kafka_config_file,
     producer_extra_config={
         "on_delivery": delivery_report,
@@ -126,8 +127,8 @@ def order_pizza():
         extra_toppings = request.form.getlist("extra_topping") or list()
 
         order_details = {
-            "status": SYS_CONFIG["status-id"]["order_received"],
-            "timestamp": int(datetime.datetime.now().timestamp() * 1000),
+            "status": SYS_CONFIG["status-id"]["order_placed"],
+            "timestamp": timestamp_now(),
             "order": {
                 "extra_toppings": extra_toppings,
                 "customer_id": customer_id,
@@ -147,7 +148,7 @@ def order_pizza():
             # Add to status to check statefulness (daemon on msvc_status)
             db.upsert_status(
                 order_id,
-                SYS_CONFIG["status-id"]["order_received"],
+                SYS_CONFIG["status-id"]["order_placed"],
             )
 
         # Produce to kafka topic
@@ -253,11 +254,16 @@ def get_order(order_id):
 ########
 # Main #
 ########
+def main(*args):
+    # If started using gunicorn
+    return app
+
+
 if __name__ == "__main__":
     # Save PID
     save_pid(SCRIPT)
 
-    # Start Flask web app
+    # Start web app
     app.run(
         host="localhost",
         port=8000,

@@ -26,11 +26,13 @@ from utils import (
     log_ini,
     save_pid,
     log_exception,
+    timestamp_now,
     delivery_report,
     get_script_name,
+    get_system_config,
     validate_cli_args,
     log_event_received,
-    get_system_config,
+    # update_pizza_status,
     get_topic_partitions,
     set_producer_consumer,
     get_custom_partitioner,
@@ -55,7 +57,7 @@ PRODUCE_TOPIC_STATUS = SYS_CONFIG["kafka-topics"]["pizza_status"]
 CONSUME_TOPICS = [
     SYS_CONFIG["kafka-topics"]["pizza_assembled"],
 ]
-PRODUCER, CONSUMER, ADMIN_CLIENT = set_producer_consumer(
+_, PRODUCER, CONSUMER, ADMIN_CLIENT = set_producer_consumer(
     kafka_config_file,
     producer_extra_config={
         "on_delivery": delivery_report,
@@ -78,33 +80,19 @@ GRACEFUL_SHUTDOWN = GracefulShutdown(consumer=CONSUMER)
 # General functions #
 #####################
 def pizza_baked(order_id: str):
-    with GRACEFUL_SHUTDOWN as _:
-        # Produce to kafka topic
-        PRODUCER.produce(
-            PRODUCE_TOPIC_BAKED,
-            key=order_id,
-            partition=CUSTOM_PARTITIONER(order_id.encode(), PARTITIONS_BAKED),
-        )
-        PRODUCER.flush()
-
-
-def update_pizza_status(
-    order_id: str,
-    status: int,
-):
-    with GRACEFUL_SHUTDOWN as _:
-        # Produce to kafka topic
-        PRODUCER.produce(
-            PRODUCE_TOPIC_STATUS,
-            key=order_id,
-            value=json.dumps(
-                {
-                    "status": status,
-                }
-            ).encode(),
-            partition=CUSTOM_PARTITIONER(order_id.encode(), PARTITIONS_STATUS),
-        )
-        PRODUCER.flush()
+    # Produce to kafka topic
+    PRODUCER.produce(
+        PRODUCE_TOPIC_BAKED,
+        key=order_id,
+        value=json.dumps(
+            {
+                "status": SYS_CONFIG["status-id"]["pizza_baked"],
+                "timestamp": timestamp_now(),
+            }
+        ).encode(),
+        partition=CUSTOM_PARTITIONER(order_id.encode(), PARTITIONS_BAKED),
+    )
+    PRODUCER.flush()
 
 
 def receive_pizza_assembled():
@@ -142,10 +130,14 @@ def receive_pizza_assembled():
                             pizza_baked(
                                 order_id,
                             )
-                            update_pizza_status(
-                                order_id,
-                                SYS_CONFIG["status-id"]["out_for_delivery"],
-                            )
+                            # update_pizza_status(
+                            #     PRODUCER,
+                            #     CUSTOM_PARTITIONER,
+                            #     PRODUCE_TOPIC_STATUS,
+                            #     PARTITIONS_BAKED,
+                            #     order_id,
+                            #     SYS_CONFIG["status-id"]["pizza_baked"],
+                            # )
 
                     except Exception:
                         log_exception(

@@ -15,10 +15,13 @@
 # limitations under the License.
 
 import os
+import re
 import sys
+import json
 import signal
 import logging
 import datetime
+import requests
 import importlib
 
 from configparser import ConfigParser
@@ -121,7 +124,7 @@ def log_ini(
     level: int = logging.INFO,
 ):
     logging.basicConfig(
-        format=f"\n({script}) %(levelname)s %(asctime)s.%(msecs)03d - %(message)s",
+        format=f"\n%(asctime)s.%(msecs)03d [%(levelname)s] {script}: %(message)s",
         level=level,
         datefmt="%H:%M:%S",
     )
@@ -134,27 +137,37 @@ def log_event_received(event) -> None:
 
 
 def log_exception(message: str, sys_exc_info) -> None:
-    exc_type, exc_obj, exc_tb = sys.exc_info()
+    exc_type, exc_obj, exc_tb = sys_exc_info
     fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
     logging.critical(f"{message}: [{exc_type} | {fname}@{exc_tb.tb_lineno}] {exc_obj}")
 
 
 def validate_cli_args(script: str) -> tuple:
-    if len(sys.argv) == 2:
-        sys.argv.append("default.ini")
-    elif len(sys.argv) <= 1:
+    DEFAULT_SYS_CONFIG = "default.ini"
+    if len(sys.argv) <= 1:
         logging.error(
             (
                 f"Missing configuration files. Usage: {script}.py {{KAFKA_CONFIG_FILE}} {{SYS_CONFIG_FILE}}\n"
                 "Where:\n"
                 " - KAFKA_CONFIG_FILE: file under the folder 'config_kafka/'\n"
-                " - SYS_CONFIG_FILE: file under the folder 'config_sys/' (default file is 'default.ini')\n"
+                " - SYS_CONFIG_FILE: file under the folder 'config_sys/' (default file is '{DEFAULT_SYS_CONFIG}')\n"
             )
         )
         sys.exit(0)
 
-    config_kafka = sys.argv[1]
-    config_sys = sys.argv[2]
+    if len(sys.argv) == 2:
+        sys.argv.append(DEFAULT_SYS_CONFIG)
+
+    if len(sys.argv) > 1 and sys.argv[1].startswith("webapp:"):
+        # If started using gunicorn
+        gunicorn_params = re.findall('"(.*?)"', sys.argv[1])
+        config_kafka = gunicorn_params[0]
+        config_sys = gunicorn_params[1] or DEFAULT_SYS_CONFIG
+    else:
+        # python script called directly (not via gunicorn)
+        config_kafka = sys.argv[1]
+        config_sys = sys.argv[2]
+
     kafka_config_file = os.path.join(
         FOLDER_CONFIG_KAFKA,
         config_kafka,
@@ -210,7 +223,9 @@ def set_producer_consumer(
     # Read configuration file
     config_parser = ConfigParser(interpolation=None)
     config_parser.read_file(open(kafka_config_file, "r"))
-    config_kafka = dict(config_parser["kafka"])
+    all_config = {k: dict(v) for k, v in dict(config_parser).items()}
+
+    config_kafka = all_config["kafka"]
 
     # Set producer config
     if not disable_producer:
@@ -244,18 +259,23 @@ def set_producer_consumer(
     admin_client = AdminClient(config_kafka)
 
     return (
+        all_config,
         producer,
         consumer,
         admin_client,
     )
 
 
-def get_topic_partitions(admin_client, topic_name: str) -> int:
+def get_topic_partitions(
+    admin_client,
+    topic_name: str,
+    default_partition_number: int = 1,
+) -> int:
     partitions = admin_client.list_topics(topic_name).topics.get(topic_name)
     if partitions is not None:
         partitions = len(partitions.partitions)
     else:
-        partitions = 1
+        partitions = default_partition_number
     return partitions
 
 
@@ -278,6 +298,113 @@ def delivery_report(err, msg):
 
 def timestamp_now() -> int:
     return int(datetime.datetime.now().timestamp() * 1000)
+
+
+def http_request(
+    url: str,
+    headers: dict = None,
+    payload: dict = None,
+    method: str = "POST",
+    username: str = None,
+    password: str = None,
+) -> tuple:
+    """Generic HTTP request"""
+    session = requests.Session()
+    if username and password:
+        session.auth = (username, password)
+
+    if method == "GET":
+        session = session.get
+    elif method == "PUT":
+        session = session.put
+    elif method == "PATCH":
+        session = session.patch
+    elif method == "DELETE":
+        session = session.delete
+    else:
+        session = session.post
+    try:
+        response = session(
+            url,
+            headers=headers,
+            json=payload,
+        )
+        return (response.status_code, response.text)
+    except requests.exceptions.Timeout:
+        logging.error(f"Unable to send request to '{url}': timeout")
+        return (408, {err})
+    except requests.exceptions.TooManyRedirects:
+        logging.error(f"Unable to send request to '{url}': too many redirects")
+        return (302, {err})
+    except Exception as err:
+        logging.error(f"Unable to send request to '{url}': {err}")
+        return (500, {err})
+
+
+def ksqldb(
+    end_point: str,
+    statement: str,
+    username: str = None,
+    password: str = None,
+    offset_reset_earliest: bool = True,
+):
+    """Submit HTTP POST request to ksqlDB"""
+    try:
+        # Clean-up statement
+        statement = statement.replace("\r", " ")
+        statement = statement.replace("\t", " ")
+        statement = statement.replace("\n", " ")
+        while statement.find("  ") > -1:
+            statement = statement.replace("  ", " ")
+
+        url = f"{end_point.strip('/')}/ksql"
+        status_code, response = http_request(
+            url,
+            headers={
+                "Accept": "application/vnd.ksql.v1+json",
+                "Content-Type": "application/vnd.ksql.v1+json; charset=utf-8",
+            },
+            payload={
+                "ksql": statement,
+                "streamsProperties": {
+                    "ksql.streams.auto.offset.reset": "earliest"
+                    if offset_reset_earliest
+                    else "latest",
+                    "ksql.streams.cache.max.bytes.buffering": "0",
+                },
+            },
+            username=username,
+            password=password,
+        )
+        if status_code == 200:
+            logging.debug(f"ksqlDB ({status_code}): {statement}")
+        else:
+            raise Exception(f"{response} (Status code {status_code})")
+    except Exception as err:
+        logging.error(f"Unable to send request to '{url}': {err}")
+
+
+def update_pizza_status(
+    producer,
+    partitioner,
+    topic: str,
+    partitions: int,
+    order_id: str,
+    status: int,
+):
+    # Produce to kafka topic
+    producer.produce(
+        topic,
+        key=order_id,
+        value=json.dumps(
+            {
+                "status": status,
+                "timestamp": timestamp_now(),
+            }
+        ).encode(),
+        partition=partitioner(order_id.encode(), partitions),
+    )
+    producer.flush()
 
 
 ###################

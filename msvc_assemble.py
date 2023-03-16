@@ -27,11 +27,13 @@ from utils import (
     log_ini,
     save_pid,
     log_exception,
+    timestamp_now,
     delivery_report,
     get_script_name,
+    get_system_config,
     validate_cli_args,
     log_event_received,
-    get_system_config,
+    # update_pizza_status,
     get_topic_partitions,
     set_producer_consumer,
     get_custom_partitioner,
@@ -56,7 +58,7 @@ PRODUCE_TOPIC_ASSEMBLED = SYS_CONFIG["kafka-topics"]["pizza_assembled"]
 CONSUME_TOPICS = [
     SYS_CONFIG["kafka-topics"]["pizza_ordered"],
 ]
-PRODUCER, CONSUMER, ADMIN_CLIENT = set_producer_consumer(
+_, PRODUCER, CONSUMER, ADMIN_CLIENT = set_producer_consumer(
     kafka_config_file,
     producer_extra_config={
         "on_delivery": delivery_report,
@@ -78,39 +80,24 @@ GRACEFUL_SHUTDOWN = GracefulShutdown(consumer=CONSUMER)
 #####################
 # General functions #
 #####################
-def pizza_assembled(order_id: str, baking_time: int):
-    with GRACEFUL_SHUTDOWN as _:
-        # Produce to kafka topic
-        PRODUCER.produce(
-            PRODUCE_TOPIC_ASSEMBLED,
-            key=order_id,
-            value=json.dumps(
-                {
-                    "baking_time": baking_time,
-                }
-            ).encode(),
-            partition=CUSTOM_PARTITIONER(order_id.encode(), PARTITIONS_ASSEMBLED),
-        )
-        PRODUCER.flush()
-
-
-def update_pizza_status(
+def pizza_assembled(
     order_id: str,
-    status: int,
+    baking_time: int,
 ):
-    with GRACEFUL_SHUTDOWN as _:
-        # Produce to kafka topic
-        PRODUCER.produce(
-            PRODUCE_TOPIC_STATUS,
-            key=order_id,
-            value=json.dumps(
-                {
-                    "status": status,
-                }
-            ).encode(),
-            partition=CUSTOM_PARTITIONER(order_id.encode(), PARTITIONS_STATUS),
-        )
-        PRODUCER.flush()
+    # Produce to kafka topic
+    PRODUCER.produce(
+        PRODUCE_TOPIC_ASSEMBLED,
+        key=order_id,
+        value=json.dumps(
+            {
+                "status": SYS_CONFIG["status-id"]["pizza_assembled"],
+                "baking_time": baking_time,
+                "timestamp": timestamp_now(),
+            }
+        ).encode(),
+        partition=CUSTOM_PARTITIONER(order_id.encode(), PARTITIONS_ASSEMBLED),
+    )
+    PRODUCER.flush()
 
 
 def receive_orders():
@@ -144,7 +131,7 @@ def receive_orders():
                                 16,
                             )
 
-                            # Assemble pizza (blocking point as it is not using asyncio, but that is for demo purposes)
+                            # Assemble pizza
                             assembling_time = seed % 5 + 2
                             logging.info(
                                 f"Preparing order '{order_id}', assembling time is {assembling_time} second(s)"
@@ -158,10 +145,14 @@ def receive_orders():
                                 order_id,
                                 baking_time,
                             )
-                            update_pizza_status(
-                                order_id,
-                                SYS_CONFIG["status-id"]["in_the_oven"],
-                            )
+                            # update_pizza_status(
+                            #     PRODUCER,
+                            #     CUSTOM_PARTITIONER,
+                            #     PRODUCE_TOPIC_STATUS,
+                            #     PARTITIONS_ASSEMBLED,
+                            #     order_id,
+                            #     SYS_CONFIG["status-id"]["pizza_assembled"],
+                            # )
 
                     except Exception:
                         log_exception(

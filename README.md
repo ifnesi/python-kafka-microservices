@@ -69,20 +69,27 @@ Confluent Cloud Stream Lineage view:
 - Create a virtual environment: ```python3 -m venv _venv```
 - Activate the virtual environment: ```source _venv/bin/activate```
 - Install project requirements: ```python3 -m pip install -f requirements.txt```
+- Run script to create topics*/ksqlDB streams: ```python3 run_me_first.py {KAFKA_CONFIG_FILE} {SYS_CONFIG_FILE}```
 - Deactivate the virtual environment: ```deactivate```
-- Access your Apache Kafka cluster and create the following topics* (with any number of partitions, it will not matter for this project):
-  - pizza-ordered
-  - pizza-assembled
-  - pizza-baked
-  - pizza-status
-
-(*) That can be changed via system configuration file (default is ```'config_sys/default.ini'```):
+  - ```{SYS_CONFIG_FILE}``` is a system configuration file, this file must be located under the folder ```config_sys/``` (default file is ```default.ini```)
+  - ```{KAFKA_CONFIG_FILE}``` is a Kafka configuration file containing the properties to access the Apache Kafka cluster, this file must be located under the folder ```config_kafka/``` (see file ```config_kafka/example.ini``` for reference):
+```
+    [kafka]
+    bootstrap.servers = {{ host:port }}
+    security.protocol = SASL_SSL
+    sasl.mechanisms = PLAIN
+    sasl.username = {{ CLUSTER_API_KEY }}
+    sasl.password = {{ CLUSTER_API_SECRET }}
+```
+(*) Topics can be changed via system configuration file (default is ```'config_sys/default.ini'```):
 ```
 [kafka-topics]
-pizza_status = pizza-status
+pizza_pending = pizza-pending
 pizza_ordered = pizza-ordered
 pizza_assembled = pizza-assembled
 pizza_baked = pizza-baked
+pizza_delivered = pizza-delivered
+pizza_status = pizza-status
 ```
 
 ### Running the webapp and microservices
@@ -94,16 +101,6 @@ pizza_baked = pizza-baked
   - Terminal #3: ```python3 msvc_bake.py {KAFKA_CONFIG_FILE} {SYS_CONFIG_FILE}```
   - Terminal #4: ```python3 msvc_delivery.py {KAFKA_CONFIG_FILE} {SYS_CONFIG_FILE}```
   - Terminal #5: ```python3 webapp.py {KAFKA_CONFIG_FILE} {SYS_CONFIG_FILE}```
-- ```{SYS_CONFIG_FILE}``` is a system configuration file, this file must be located under the folder ```config_sys/``` (default file is ```default.ini```)
-- ```{KAFKA_CONFIG_FILE}``` is a Kafka configuration file containing the properties to access the Apache Kafka cluster, this file must be located under the folder ```config_kafka/``` (see file ```config_kafka/example.ini``` for reference):
-```
-    [kafka]
-    bootstrap.servers = {{ host:port }}
-    security.protocol = SASL_SSL
-    sasl.mechanisms = PLAIN
-    sasl.username = {{ CLUSTER_API_KEY }}
-    sasl.password = {{ CLUSTER_API_SECRET }}
-```
 - In a real life scenario each microservice (consumer in a consumer group) could be instantiated for as many times as there are partitions to the topic, however that is just for demo/learning purposes, only one instance will be spawn
 - Also, for the simplicity of the demo, no Schema Registry is being used. That is not an ideal scenario as the "contract" between Producers and Consumers are "implicitly hard coded" other than being declared through the schema registry
 - Open your browser and navigate to http://127.0.0.1:8000
@@ -212,8 +209,8 @@ Have you noticed the microservice **Deliver Pizza** is stateful as it has two st
 As that microservice is subscribed to two different topics, Apache Kafka cannot guarantee the order of events for the same event key. Hang on, but won't the early notification always arrive before the notification the pizza is baked (see the architecture diagram above)? The answer to that is: usually yes, as the first step happens before the second one, however what if for some reason the microservice **Deliver Pizza** is down and a bunch of events get pushed through the topics? When the microservice is brought up it will consume the events from the two topics and not necessarily in the same chronological order (for the same event key). For that reason microservice like that needs to take into account this kind of situations. On this project, if that happens the customer would first get the status "Bear with us we are checking your order, it won’t take long" (once the pizza is baked notification is processed), then would get the status "Your pizza was delivered" (once the early warning notification is processed).
 
 #### **IMPORTANT 2**
-The microservice **Process Status** is also stateful as it receives several notifications for the same event key. If that service was to be handled as stateless it would be a problem if a given order is not fully processed, for example, what if the baker decided to call it a day? The status of the order would get stuck forever as "Your pizza is in the oven". That problem could be solved with **ksqlDB** by using a [session window](https://developer.confluent.io/tutorials/create-session-windows/ksql.html) or **Flink**, for example, it could be estimated the orders shouldn't take more than 'X minutes' between being ordered and baked and 'Y minutes' between being baked and not completed yet, creating then a SLA in between microservices, if that gets violated it could trigger a notification to state something got stuck (at least the pizza shop manager would get notified before the customer call to complain about the delay).<br><br>
-What that microservice does is to spawn a new thread with an infinite loop to check the status of all orders in progress for every few seconds, like a watchdog.
+The microservice **Process Status** is also stateful as it receives several notifications for the same event key. If that service was to be handled as stateless it would be a problem if a given order is not fully processed, for example, what if the baker decided to call it a day? The status of the order would get stuck forever as "Your pizza is in the oven". For example, it could be estimated the orders shouldn't take more than 'X minutes' between being ordered and baked and 'Y minutes' between being baked and not completed yet, creating then a SLA in between microservices, if that gets violated it could trigger a notification to state something got stuck (at least the pizza shop manager would get notified before the customer call to complain about the delay).<br><br>
+What that microservice does is to spaw a new thread with an infinite loop to check the status of all orders in progress for every few seconds, like a watchdog.
 
 ### Graceful shutdown
 One very important element of any Kafka consumer is by handling OS signals to be able to perform a graceful shutdown. Any consumer in a consumer group should inform the cluster it is leaving so it can rebalance itself other than wait for a timeout. All microservices used in this project have a graceful shutdown procedure in place, example:

@@ -55,7 +55,7 @@ SYS_CONFIG = get_system_config(sys_config_file)
 CONSUME_TOPICS = [
     SYS_CONFIG["kafka-topics"]["pizza_status"],
 ]
-_, CONSUMER, _ = set_producer_consumer(
+_, _, CONSUMER, _ = set_producer_consumer(
     kafka_config_file,
     disable_producer=True,
     consumer_extra_config={
@@ -90,9 +90,8 @@ with GRACEFUL_SHUTDOWN as _:
 #####################
 # General functions #
 #####################
-def status_watchdog():
-    """As this microservice is stateful it's needed a way to check if any status got stuck
-    That problem could be solved using Kafka Stream or ksqlDB/Flink"""
+def thread_status_watchdog():
+    """As this microservice is stateful it's needed a way to check if any status got stuck"""
     while True:
         with DB(
             ORDERS_DB,
@@ -138,7 +137,7 @@ def get_pizza_status():
                                     pizza_status = json.loads(
                                         event.value().decode()
                                     ).get(
-                                        "status",
+                                        "STATUS",
                                         SYS_CONFIG["status-id"]["unknown"],
                                     )
                                 except Exception:
@@ -193,7 +192,7 @@ if __name__ == "__main__":
     save_pid(SCRIPT)
 
     # Order status watchdog
-    Thread(target=status_watchdog, daemon=True).start()
+    Thread(target=thread_status_watchdog, daemon=True).start()
 
     # Start consumer
     get_pizza_status()
