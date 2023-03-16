@@ -17,7 +17,6 @@
 import os
 import re
 import sys
-import json
 import signal
 import logging
 import datetime
@@ -26,6 +25,7 @@ import importlib
 
 from configparser import ConfigParser
 from confluent_kafka import Producer, Consumer
+from logging.handlers import TimedRotatingFileHandler
 from confluent_kafka.admin import AdminClient
 
 from utils.murmur2 import Murmur2Partitioner
@@ -35,6 +35,7 @@ from utils.murmur2 import Murmur2Partitioner
 # Global variables #
 ####################
 FOLDER_PID = "pid"
+FOLDER_LOGS = "logs"
 FOLDER_CONFIG_KAFKA = "config_kafka"
 FOLDER_CONFIG_SYS = "config_sys"
 
@@ -123,10 +124,20 @@ def log_ini(
     script: str,
     level: int = logging.INFO,
 ):
+    handlers = [
+        TimedRotatingFileHandler(
+            os.path.join(FOLDER_LOGS, "app.logs"),
+            when="midnight",
+            backupCount=30,
+        ),  # log to file and rotate
+        logging.StreamHandler(),
+    ]
+
     logging.basicConfig(
         format=f"\n%(asctime)s.%(msecs)03d [%(levelname)s] {script}: %(message)s",
         level=level,
         datefmt="%H:%M:%S",
+        handlers=handlers,
     )
 
 
