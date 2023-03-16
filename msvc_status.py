@@ -28,6 +28,7 @@ from utils import (
     GracefulShutdown,
     log_ini,
     save_pid,
+    get_hostname,
     log_exception,
     get_script_name,
     validate_cli_args,
@@ -43,6 +44,7 @@ from utils import (
 # Global variables #
 ####################
 SCRIPT = get_script_name(__file__)
+HOSTNAME = get_hostname()
 log_ini(SCRIPT)
 
 # Validate command arguments
@@ -59,8 +61,8 @@ _, _, CONSUMER, _ = set_producer_consumer(
     kafka_config_file,
     disable_producer=True,
     consumer_extra_config={
-        "group.id": SYS_CONFIG["kafka-consumer-group-id"]["microservice_status"],
-        "client.id": SYS_CONFIG["kafka-client-id"]["microservice_status"],
+        "group.id": f"""{SYS_CONFIG["kafka-consumer-group-id"]["microservice_status"]}_{HOSTNAME}""",
+        "client.id": f"""{SYS_CONFIG["kafka-client-id"]["microservice_status"]}_{HOSTNAME}""",
     },
 )
 

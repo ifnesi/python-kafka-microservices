@@ -18,6 +18,7 @@ import os
 import re
 import sys
 import signal
+import socket
 import logging
 import datetime
 import requests
@@ -43,6 +44,10 @@ FOLDER_CONFIG_SYS = "config_sys"
 #####################
 # Generic functions #
 #####################
+def get_hostname() -> str:
+    return socket.gethostname()
+
+
 def import_state_store_class(db_module_class: str):
     try:
         module = importlib.import_module(db_module_class)
@@ -126,7 +131,7 @@ def log_ini(
 ):
     handlers = [
         TimedRotatingFileHandler(
-            os.path.join(FOLDER_LOGS, "app.logs"),
+            os.path.join(FOLDER_LOGS, f"{script}.log"),
             when="midnight",
             backupCount=30,
         ),  # log to file and rotate
@@ -134,16 +139,26 @@ def log_ini(
     ]
 
     logging.basicConfig(
-        format=f"\n%(asctime)s.%(msecs)03d [%(levelname)s] {script}: %(message)s",
+        format=f"\n\x00%(asctime)s.%(msecs)03d [%(levelname)s] {script}: %(message)s",
         level=level,
-        datefmt="%H:%M:%S",
+        datefmt="%Y-%m-%d %H:%M:%S",
         handlers=handlers,
     )
 
 
 def log_event_received(event) -> None:
+    event_data = [
+        event.topic(),
+        event.key(),
+        event.value(),
+    ]
+    for n in range(len(event_data)):
+        try:
+            event_data[n] = event_data[n].decode()
+        except Exception:
+            pass
     logging.info(
-        f"""Event received from topic '{event.topic()},' key {event.key()}, value {event.value()}"""
+        f"""Event received from topic '{event_data[0]},' key {event_data[1]}, value {event_data[2]}"""
     )
 
 

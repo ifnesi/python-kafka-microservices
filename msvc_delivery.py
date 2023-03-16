@@ -25,6 +25,7 @@ from utils import (
     GracefulShutdown,
     log_ini,
     save_pid,
+    get_hostname,
     log_exception,
     timestamp_now,
     delivery_report,
@@ -42,8 +43,8 @@ from utils import (
 ####################
 # Global variables #
 ####################
-PENDING_ORDER = "PENDING"
 SCRIPT = get_script_name(__file__)
+HOSTNAME = get_hostname()
 log_ini(SCRIPT)
 
 # Validate command arguments
@@ -53,6 +54,7 @@ kafka_config_file, sys_config_file = validate_cli_args(SCRIPT)
 SYS_CONFIG = get_system_config(sys_config_file)
 
 # Set producer/consumer objects
+PENDING_ORDER = "PENDING"
 PRODUCE_TOPIC_DELIVERED = SYS_CONFIG["kafka-topics"]["pizza_delivered"]
 PRODUCE_TOPIC_PENDING = SYS_CONFIG["kafka-topics"]["pizza_pending"]
 PRODUCE_TOPIC_STATUS = SYS_CONFIG["kafka-topics"]["pizza_status"]
@@ -63,11 +65,11 @@ _, PRODUCER, CONSUMER, ADMIN_CLIENT = set_producer_consumer(
     kafka_config_file,
     producer_extra_config={
         "on_delivery": delivery_report,
-        "client.id": SYS_CONFIG["kafka-client-id"]["microservice_delivery"],
+        "client.id": f"""{SYS_CONFIG["kafka-client-id"]["microservice_delivery"]}_{HOSTNAME}""",
     },
     consumer_extra_config={
-        "group.id": SYS_CONFIG["kafka-consumer-group-id"]["microservice_delivery"],
-        "client.id": SYS_CONFIG["kafka-client-id"]["microservice_delivery"],
+        "group.id": f"""{SYS_CONFIG["kafka-consumer-group-id"]["microservice_delivery"]}_{HOSTNAME}""",
+        "client.id": f"""{SYS_CONFIG["kafka-client-id"]["microservice_delivery"]}_{HOSTNAME}""",
     },
 )
 CUSTOM_PARTITIONER = get_custom_partitioner()

@@ -16,18 +16,22 @@
 
 # Web application
 
+import os
 import json
 import uuid
 import hashlib
 import logging
 import datetime
+import subprocess
 
 from flask import Flask, render_template, request
 
 from utils import (
+    FOLDER_LOGS,
     GracefulShutdown,
     log_ini,
     save_pid,
+    get_hostname,
     get_script_name,
     delivery_report,
     timestamp_now,
@@ -44,6 +48,7 @@ from utils import (
 # Global variables #
 ####################
 SCRIPT = get_script_name(__file__)
+HOSTNAME = get_hostname()
 log_ini(SCRIPT)
 next_delete_past_timestamp = datetime.datetime.now()
 
@@ -59,7 +64,7 @@ _, PRODUCER, _, ADMIN_CLIENT = set_producer_consumer(
     kafka_config_file,
     producer_extra_config={
         "on_delivery": delivery_report,
-        "client.id": SYS_CONFIG["kafka-client-id"]["webapp"],
+        "client.id": f"""{SYS_CONFIG["kafka-client-id"]["webapp"]}_{HOSTNAME}""",
     },
     disable_consumer=True,
 )
@@ -91,6 +96,37 @@ app = Flask(
 )
 log = logging.getLogger("werkzeug")
 log.setLevel(logging.WARNING)
+
+
+#####################
+# General functions #
+#####################
+def get_system_logs(
+    offset: int = 50,
+) -> str:
+    logs = list()
+    for log in (
+        "webapp",
+        "msvc_assemble",
+        "msvc_bake",
+        "msvc_delivery",
+        "msvc_status",
+    ):
+        proc = subprocess.Popen(
+            [
+                "tail",
+                "-n",
+                str(offset),
+                os.path.join(FOLDER_LOGS, f"{log}.log"),
+            ],
+            stdout=subprocess.PIPE,
+        )
+        lines = proc.stdout.readlines()
+        logs += "".join([line.decode().replace("\n", "<br>") for line in lines]).split(
+            "\x00"
+        )
+    logs.sort()
+    return "".join(logs).strip("<br>")
 
 
 #################
@@ -249,6 +285,22 @@ def get_order(order_id):
                     error=f"Order '{order_id}' not found",
                     order_id=order_id,
                 )
+
+
+@app.route("/logs", methods=["GET"])
+def view_logs():
+    """View logs"""
+    return render_template(
+        "view_logs.html",
+        title="Logs",
+        log_data=get_system_logs(),
+    )
+
+
+@app.route("/logs", methods=["PUT"])
+def view_logs_ajax():
+    """View logs (AJAX call)"""
+    return get_system_logs()
 
 
 ########

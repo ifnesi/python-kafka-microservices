@@ -19,3 +19,15 @@
 .img_border:active {
     border-color: rgb(165, 165, 165);
 }
+
+.view_logs {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 14px;
+    color: #000;
+    border-radius: 2px;
+    border-color: #999;
+    border-style: solid;
+    padding: 2px;
+    border-width: 1px;
+    background-color: #eee;
+}

@@ -25,6 +25,7 @@ from utils import (
     GracefulShutdown,
     log_ini,
     save_pid,
+    get_hostname,
     log_exception,
     timestamp_now,
     delivery_report,
@@ -42,6 +43,7 @@ from utils import (
 # Global variables #
 ####################
 SCRIPT = get_script_name(__file__)
+HOSTNAME = get_hostname()
 log_ini(SCRIPT)
 
 # Validate command arguments
@@ -60,11 +62,11 @@ _, PRODUCER, CONSUMER, ADMIN_CLIENT = set_producer_consumer(
     kafka_config_file,
     producer_extra_config={
         "on_delivery": delivery_report,
-        "client.id": SYS_CONFIG["kafka-client-id"]["microservice_baked"],
+        "client.id": f"""{SYS_CONFIG["kafka-client-id"]["microservice_baked"]}_{HOSTNAME}""",
     },
     consumer_extra_config={
-        "group.id": SYS_CONFIG["kafka-consumer-group-id"]["microservice_baked"],
-        "client.id": SYS_CONFIG["kafka-client-id"]["microservice_baked"],
+        "group.id": f"""{SYS_CONFIG["kafka-consumer-group-id"]["microservice_baked"]}_{HOSTNAME}""",
+        "client.id": f"""{SYS_CONFIG["kafka-client-id"]["microservice_baked"]}_{HOSTNAME}""",
     },
 )
 CUSTOM_PARTITIONER = get_custom_partitioner()
