@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+mkdir -p pid
+mkdir -p logs
+
 kafka_config_file="config_kafka/$1"
 sys_config_file="config_sys/${2:-default.ini}"
 
