@@ -1,5 +1,6 @@
 _venv
-pid
+pid/*
+logs/*
 __pycache__
 
 *.pyc
