@@ -32,7 +32,6 @@ from utils import (
     get_system_config,
     validate_cli_args,
     log_event_received,
-    # update_pizza_status,
     get_topic_partitions,
     set_producer_consumer,
     get_custom_partitioner,
@@ -144,14 +143,6 @@ def receive_pizza_baked():
         logging.info(f"Order '{order_id}' delivered to customer_id '{customer_id}'")
         # Update kafka topics (pizza delivered)
         pizza_delivered(order_id)
-        # update_pizza_status(
-        #     PRODUCER,
-        #     CUSTOM_PARTITIONER,
-        #     PRODUCE_TOPIC_STATUS,
-        #     PARTITIONS_DELIVERED,
-        #     order_id,
-        #     SYS_CONFIG["status-id"]["delivered"],
-        # )
 
     CONSUMER.subscribe(CONSUME_TOPICS)
     logging.info(f"Subscribed to topic(s): {', '.join(CONSUME_TOPICS)}")
@@ -240,14 +231,6 @@ def receive_pizza_baked():
 
                                 # Update kafka topics (error with order)
                                 pizza_pending(order_id)
-                                # update_pizza_status(
-                                #     PRODUCER,
-                                #     CUSTOM_PARTITIONER,
-                                #     PRODUCE_TOPIC_STATUS,
-                                #     PARTITIONS_PENDING,
-                                #     order_id,
-                                #     SYS_CONFIG["status-id"]["pending"],
-                                # )
 
                                 # Add order_id to the DB as "pending", that happens when the early notification (for some reason) arrives after the notification the pizza is baked
                                 with DB(

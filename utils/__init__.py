@@ -384,29 +384,6 @@ def ksqldb(
         logging.error(f"Unable to send request to '{url}': {err}")
 
 
-def update_pizza_status(
-    producer,
-    partitioner,
-    topic: str,
-    partitions: int,
-    order_id: str,
-    status: int,
-):
-    # Produce to kafka topic
-    producer.produce(
-        topic,
-        key=order_id,
-        value=json.dumps(
-            {
-                "status": status,
-                "timestamp": timestamp_now(),
-            }
-        ).encode(),
-        partition=partitioner(order_id.encode(), partitions),
-    )
-    producer.flush()
-
-
 ###################
 # Generic classes #
 ###################

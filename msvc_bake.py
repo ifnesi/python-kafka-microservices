@@ -32,7 +32,6 @@ from utils import (
     get_system_config,
     validate_cli_args,
     log_event_received,
-    # update_pizza_status,
     get_topic_partitions,
     set_producer_consumer,
     get_custom_partitioner,
@@ -130,14 +129,6 @@ def receive_pizza_assembled():
                             pizza_baked(
                                 order_id,
                             )
-                            # update_pizza_status(
-                            #     PRODUCER,
-                            #     CUSTOM_PARTITIONER,
-                            #     PRODUCE_TOPIC_STATUS,
-                            #     PARTITIONS_BAKED,
-                            #     order_id,
-                            #     SYS_CONFIG["status-id"]["pizza_baked"],
-                            # )
 
                     except Exception:
                         log_exception(
