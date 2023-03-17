@@ -61,6 +61,12 @@ Detailed view of all microservices and to what Kafka topics their produce and ar
 Confluent Cloud Stream Lineage view:
 ![image](static/images/docs/cc-stream-lineage.png)
 
+### Start now!
+You can setup your own environment to do the tests, or go straight to the demo on http://confluent-pizza-demo-1570877491.eu-west-1.elb.amazonaws.com
+ - Enter your username
+ - No need for password
+ - You will only be able to see your own orders, you cannot see someone else's
+
 ### Installation and Configuration
 - SQLite3 and Python +3.8 required
 - Install python virtual environment: ```python3 -m pip install venv``` or ```python3 -m pip install virtualenv```
