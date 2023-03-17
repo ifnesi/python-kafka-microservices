@@ -17,17 +17,25 @@
 # Web application
 
 import os
+import re
 import json
 import uuid
-import hashlib
 import logging
 import datetime
-import subprocess
 
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, session, redirect, url_for
+from flask_login import (
+    UserMixin,
+    LoginManager,
+    current_user,
+    login_required,
+    login_user,
+    logout_user,
+)
 
 from utils import (
     FOLDER_LOGS,
+    EXTENSION_LOGS,
     GracefulShutdown,
     log_ini,
     save_pid,
@@ -94,45 +102,77 @@ app = Flask(
     static_folder="static",
     template_folder="templates",
 )
+app.config["SECRET_KEY"] = "718d5fec-cc52-4b29-b3dd-9c2e7b97266e"
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = "login"
 log = logging.getLogger("werkzeug")
 log.setLevel(logging.WARNING)
 
 
-#####################
-# General functions #
-#####################
-def get_system_logs(
-    offset: int = 50,
-) -> str:
-    logs = list()
-    for log in (
-        "webapp",
-        "msvc_assemble",
-        "msvc_bake",
-        "msvc_delivery",
-        "msvc_status",
-    ):
-        proc = subprocess.Popen(
-            [
-                "tail",
-                "-n",
-                str(offset),
-                os.path.join(FOLDER_LOGS, f"{log}.log"),
-            ],
-            stdout=subprocess.PIPE,
-        )
-        lines = proc.stdout.readlines()
-        logs += "".join([line.decode().replace("\n", "<br>") for line in lines]).split(
-            "\x00"
-        )
-    logs.sort()
-    return "".join(logs).strip("<br>")
+###########
+# Classes #
+###########
+class User(UserMixin):
+    def __init__(self, id: str) -> None:
+        super().__init__()
+        self.id = id
 
 
 #################
 # Flask routing #
 #################
+@app.route("/health-check", methods=["GET"])
+def view_logs():
+    """Health-Check for LB"""
+    return "Ok"
+
+
+@login_manager.unauthorized_handler
+def unauthorized():
+    return redirect(url_for("login"))
+
+
+@login_manager.user_loader
+def load_user(customer_id):
+    return User(id=customer_id)
+
+
+@app.route("/login", methods=["GET"])
+def login():
+    if current_user.is_authenticated:
+        return redirect(url_for("view_menu"))
+    else:
+        return render_template(
+            "login.html",
+            title="Login",
+        )
+
+
+@app.route("/login", methods=["POST"])
+def do_login():
+    request_form = dict(request.form)
+    session["customer_id"] = uuid.uuid4().hex
+    session["username"] = request_form.get("username", "Anonymous").strip()[:16]
+    login_user(
+        User(session["username"]),
+        duration=datetime.timedelta(hours=1),
+        force=True,
+    )
+    return redirect(url_for("view_menu"))
+
+
+@app.route("/logout", methods=["GET"])
+@login_required
+def logout():
+    logout_user()
+    session.pop("username", None)
+    session.pop("customer_id", None)
+    return redirect(url_for("login"))
+
+
 @app.route("/", methods=["GET"])
+@login_required
 def view_menu():
     """View menu to order a pizza"""
     return render_template(
@@ -146,18 +186,18 @@ def view_menu():
 
 
 @app.route("/", methods=["POST"])
+@login_required
 def order_pizza():
     """Process pizza order request"""
     with GRACEFUL_SHUTDOWN as _:
         # Generate order unique ID
-        order_id = uuid.uuid4().hex[-5:]
+        order_id = uuid.uuid4().hex[-8:]
 
         # Get request form
         request_form = dict(request.form)
         request_form.pop("extra_topping", None)
-
-        # Generate customer ID (in a real world situation that would come from the customer id logged in to the webapp)
-        customer_id = hashlib.md5(request_form["name"].encode()).hexdigest()
+        request_form["customer_id"] = session["customer_id"]
+        request_form["username"] = session["username"]
 
         # Get extra topping list
         extra_toppings = request.form.getlist("extra_topping") or list()
@@ -167,7 +207,6 @@ def order_pizza():
             "timestamp": timestamp_now(),
             "order": {
                 "extra_toppings": extra_toppings,
-                "customer_id": customer_id,
                 **request_form,
             },
         }
@@ -206,8 +245,9 @@ def order_pizza():
 
 
 @app.route("/orders", methods=["GET"])
+@login_required
 def view_orders():
-    """View all orders"""
+    """View all orders for the customer_id"""
     global next_delete_past_timestamp
 
     with GRACEFUL_SHUTDOWN as _:
@@ -229,11 +269,12 @@ def view_orders():
             return render_template(
                 "view_orders.html",
                 title="Orders",
-                order_ids=db.get_orders(),
+                order_ids=db.get_orders(session["customer_id"]),
             )
 
 
 @app.route("/orders/<order_id>", methods=["PUT"])
+@login_required
 def get_order_ajax(order_id):
     """View order by order_id (AJAX call)"""
     with GRACEFUL_SHUTDOWN as _:
@@ -241,7 +282,10 @@ def get_order_ajax(order_id):
             ORDERS_DB,
             sys_config=SYS_CONFIG,
         ) as db:
-            order_details = db.get_order_id(order_id)
+            order_details = db.get_order_id(
+                order_id,
+                customer_id=session["customer_id"],
+            )
             if order_details is not None:
                 return {
                     "str": order_details["status_str"],
@@ -251,14 +295,18 @@ def get_order_ajax(order_id):
 
 
 @app.route("/orders/<order_id>", methods=["GET"])
-def get_order(order_id):
+@login_required
+def get_order(order_id: str):
     """View order by order_id"""
     with GRACEFUL_SHUTDOWN as _:
         with DB(
             ORDERS_DB,
             sys_config=SYS_CONFIG,
         ) as db:
-            order_details = db.get_order_id(order_id)
+            order_details = db.get_order_id(
+                order_id,
+                customer_id=session["customer_id"],
+            )
             if order_details is not None:
                 # Order exists
                 return render_template(
@@ -271,7 +319,7 @@ def get_order(order_id):
                     status=order_details["status"],
                     status_str=order_details["status_str"],
                     status_delivered=SYS_CONFIG["status-id"]["delivered"],
-                    name=order_details["name"],
+                    username=order_details["username"],
                     order=f"""Sauce: {order_details["sauce"]}<br>
                             Cheese: {order_details["cheese"]}<br>
                             Main: {order_details["topping"]}<br>
@@ -287,20 +335,32 @@ def get_order(order_id):
                 )
 
 
-@app.route("/logs", methods=["GET"])
-def view_logs():
-    """View logs"""
-    return render_template(
-        "view_logs.html",
-        title="Logs",
-        log_data=get_system_logs(),
-    )
-
-
-@app.route("/logs", methods=["PUT"])
-def view_logs_ajax():
+@app.route("/logs/<order_id>", methods=["PUT"])
+@login_required
+def view_logs_ajax(order_id: str):
     """View logs (AJAX call)"""
-    return get_system_logs()
+    logs = list()
+    log_files = [
+        os.path.join(FOLDER_LOGS, file)
+        for file in os.listdir(FOLDER_LOGS)
+        if file.endswith(EXTENSION_LOGS)
+    ]
+    for file in log_files:
+        with open(file, "r") as f:
+            lines = f.read().split("\x00")
+            logs += [line.replace("\n", "<br>") for line in lines if order_id in line]
+    if logs:
+        logs.sort()  # sort lines by timestamp
+        logs = "".join(logs).strip("<br>") + "<br>" + "<br>"
+        headers = re.findall(
+            "(\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}.\d{3}\s\[.+?\].+?:\s)",
+            logs,
+        )
+        for header in headers:
+            logs = logs.replace(header, f"""<b>{header.replace(": ", "<br>")}</b>""")
+    else:
+        logs = f"No logs found for order_id {order_id}"
+    return logs
 
 
 ########
