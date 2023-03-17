@@ -16,10 +16,17 @@
 
 <body>
     <div class="container">
-        {% block content %}{% endblock %}
-        <p class="text-center pt-3 text-secondary small">Order your pizza with Confluent, powered by Confluent
-            Cloud&copy; and Apache Kafka&copy;
-        </p>
+        <div class="row">
+            <div class="col-12">
+                {% block content %}{% endblock %}
+            </div>
+        </div>
+        <div class="row mt-3">
+            <div class="col-12">
+                <p class="text-center text-secondary small">Order your pizza with <b>Confluent</b>, powered by <a
+                        href="https://www.confluent.io/confluent-cloud" target="_blank">Confluent Cloud</a>&copy;</p>
+            </div>
+        </div>
     </div>
 </body>
 
