@@ -62,7 +62,7 @@ Confluent Cloud Stream Lineage view:
 ![image](static/images/docs/cc-stream-lineage.png)
 
 ### Start now!
-You can setup your own environment to do the tests, or go straight to the demo by clicking <a href="http://confluent-pizza-demo-1570877491.eu-west-1.elb.amazonaws.com" title="Start demo" target="_blank">here</a>.
+You can setup your own environment to do the tests, or go straight to the public demo by clicking <a href="http://confluent-pizza-demo-1570877491.eu-west-1.elb.amazonaws.com" title="Start demo" target="_blank">here</a>.
  - Enter your username
  - No need for password
  - You will only be able to see your own orders, you cannot see someone else's
