@@ -84,6 +84,7 @@ class BaseStateStore(ABC):
         self,
         order_id: str,
         *args,
+        customer_id: str = None,
         **kwargs,
     ) -> dict:
         pass
@@ -91,6 +92,7 @@ class BaseStateStore(ABC):
     @abstractmethod
     def get_orders(
         self,
+        customer_id: str,
         *args,
         **kwargs,
     ) -> dict:

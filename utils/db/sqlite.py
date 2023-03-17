@@ -76,7 +76,7 @@ class DB(BaseStateStore):
             f"""CREATE TABLE IF NOT EXISTS {self.sys_config["state-store-orders"]["table_orders"]} (
                 order_id TEXT PRIMARY KEY,
                 timestamp INTEGER,
-                name TEXT,
+                username TEXT,
                 customer_id TEXT,
                 status INTEGER,
                 sauce TEXT,
@@ -163,11 +163,15 @@ class DB(BaseStateStore):
     def get_order_id(
         self,
         order_id: str,
+        customer_id: str = None,
     ) -> dict:
+        where_clause = f"order_id='{order_id}'"
+        if customer_id is not None:
+            where_clause += f" AND customer_id='{customer_id}'"
         self.execute(
             f"""SELECT * FROM {self.sys_config["state-store-orders"]["table_orders"]}
                 WHERE
-                    order_id='{order_id}'""",
+                    {where_clause}""",
             commit=False,
         )
         data = self.cur.fetchone()
@@ -182,9 +186,14 @@ class DB(BaseStateStore):
 
     def get_orders(
         self,
+        customer_id: str,
     ) -> dict:
         self.execute(
-            f"""SELECT * FROM {self.sys_config["state-store-orders"]["table_orders"]} ORDER BY timestamp DESC""",
+            f"""SELECT * FROM {self.sys_config["state-store-orders"]["table_orders"]}
+            WHERE
+                customer_id='{customer_id}'
+            ORDER BY
+                timestamp DESC""",
             commit=False,
         )
         data = self.cur.fetchall()
@@ -290,7 +299,7 @@ class DB(BaseStateStore):
             f"""INSERT INTO {self.sys_config["state-store-orders"]["table_orders"]} (
                 order_id,
                 timestamp,
-                name,
+                username,
                 customer_id,
                 status,
                 sauce,
@@ -301,7 +310,7 @@ class DB(BaseStateStore):
             VALUES (
                 '{order_id}',
                 {timestamp_now()},
-                '{order_details["order"]["name"]}',
+                '{order_details["order"]["username"]}',
                 '{order_details["order"]["customer_id"]}',
                 {self.sys_config["status-id"]["order_placed"]},
                 '{order_details["order"]["sauce"]}',
