@@ -37,6 +37,7 @@ from utils.murmur2 import Murmur2Partitioner
 ####################
 FOLDER_PID = "pid"
 FOLDER_LOGS = "logs"
+EXTENSION_LOGS = ".app_log"
 FOLDER_CONFIG_KAFKA = "config_kafka"
 FOLDER_CONFIG_SYS = "config_sys"
 
@@ -128,15 +129,19 @@ def get_system_config(
 def log_ini(
     script: str,
     level: int = logging.INFO,
+    to_disk: bool = True,
 ):
     handlers = [
-        TimedRotatingFileHandler(
-            os.path.join(FOLDER_LOGS, f"{script}.log"),
-            when="midnight",
-            backupCount=30,
-        ),  # log to file and rotate
         logging.StreamHandler(),
     ]
+    if to_disk:
+        handlers.append(
+            TimedRotatingFileHandler(
+                os.path.join(FOLDER_LOGS, f"{script}{EXTENSION_LOGS}"),
+                when="midnight",
+                backupCount=2,
+            ),  # log to file and rotate
+        )
 
     logging.basicConfig(
         format=f"\n\x00%(asctime)s.%(msecs)03d [%(levelname)s] {script}: %(message)s",
