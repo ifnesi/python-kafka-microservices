@@ -52,14 +52,14 @@ db_module_class = utils.db.sqlite
 IMPORTANT: In ordert to keep consistency with Java based clients (using murmur2 partitioner), the producers will also set the topic partition using the murmur2 hash function, other than the standard CRC32 on librdkafka.
 
 Webapp and four microservices in action:
-![image](docs/service_flow.png)
+![image](static/images/docs/service_flow.png)
 
 ### Low level view
 Detailed view of all microservices and to what Kafka topics their produce and are subscribed to:
-![image](docs/gen_architecture.png)
+![image](static/images/docs/gen_architecture.png)
 
 Confluent Cloud Stream Lineage view:
-![image](docs/cc-stream-lineage.png)
+![image](static/images/docs/cc-stream-lineage.png)
 
 ### Installation and Configuration
 - SQLite3 and Python +3.8 required
@@ -120,7 +120,7 @@ Should you want to try it out on your own and run it all locally, you will need 
 
 ### Using the webapp and of chronology of events
 1. After starting all scripts and accessing the landing page (http://127.0.0.1:8000), customise your pizza and submit your order:
-![image](docs/webapp_menu.png)
+![image](static/images/docs/webapp_menu.png)
 
 2. Once the order is submitted the webapp will produce an event to the Kafka topic ```pizza-ordered```:
 ```
@@ -131,7 +131,7 @@ Should you want to try it out on your own and run it all locally, you will need 
  ```
 
 3. The webapp will display the confirmation of the order:
-![image](docs/webapp_order_confirmation.png)
+![image](static/images/docs/webapp_order_confirmation.png)
 
 4. The microservice **Deliver Pizza** (step 1/2) receives early warning about a new order by subscribing to topic ```pizza-ordered```. In a real life scenario it would get the ```customer_id``` data and query its data store (e.g., ksqlDB/Flink) and fetch the delivery address:
 ```
@@ -199,7 +199,7 @@ Should you want to try it out on your own and run it all locally, you will need 
 ```
 
 11. The flow is completed and, hopefully, we now have a happy customer for getting a delicious and nutricious pizza in such fast manner. The webapp, if on the order status page (in this case http://127.0.0.1:8000/orders/b32ad) will display in real time the status of the pizza, all of that thanks to the CQRS pattern. In a real life scenario that could be easily achieved by using frameworks such as ReactJS, however in this project it is used JQuery/AJAX async calls to accomplish that:
-![image](docs/webapp_order_delivered.png)
+![image](static/images/docs/webapp_order_delivered.png)
 
 #### **IMPORTANT 1**
 Have you noticed the microservice **Deliver Pizza** is stateful as it has two steps?
@@ -238,7 +238,7 @@ One very important element of any Kafka consumer is by handling OS signals to be
 ```
 
 ### Demo (happy path)
-![image](docs/demo.gif)
+![image](static/images/docs/demo.gif)
 
 Enjoy!
 

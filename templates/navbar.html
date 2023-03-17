@@ -23,6 +23,19 @@
                 onClick="javascript:viewOrder();">Search</a>
         </div>
         <ul class="navbar-nav ml-auto">
+            <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" href="#" id="navbardrop" data-toggle="dropdown">
+                    Help
+                </a>
+                <div class="dropdown-menu">
+                    <a class="dropdown-item" href="{{ url_for('static', filename='images/docs/gen_architecture.png') }}"
+                        target="_blank">Demo Architecture</a>
+                    <a class="dropdown-item" href="{{ url_for('static', filename='images/docs/service_flow.png') }}"
+                        target="_blank">Demo Service Flow</a>
+                    <a class="dropdown-item" href="https://github.com/ifnesi/python-kafka-microservices"
+                        target="_blank">Github repo</a>
+                </div>
+            </li>
             <li class="nav-item active">
                 <a class="btn btn-outline-danger menu-link m-1" href="/logout">Logout</a>
             </li>
