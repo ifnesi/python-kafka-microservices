@@ -1,13 +1,18 @@
+var log_data;
+var log_data_autoscroll;
 var order_id;
 var status_delivered;
 var last_result = -1;
 
 $(document).ready(function () {
+    log_data = $("#log_data");
+    log_data_autoscroll = $("#log_data_autoscroll");
     order_id = $("#order_id").val();
     status_delivered = $("#status_delivered").val();
+    get_logs();
     setTimeout(function () {
         update_order_status();
-    }, 3000);
+    }, 1000);
 });
 
 function toggle_status(remove, add) {
@@ -15,7 +20,7 @@ function toggle_status(remove, add) {
     $("#order_status").addClass(add);
 }
 
-// Update view order every 3 secs (in a realistic scenario that would be better off using REACT)
+// Update view order every 2 secs (in a realistic scenario that would be better off using REACT)
 function update_order_status() {
     if (order_id) {
         $.ajax({
@@ -29,7 +34,7 @@ function update_order_status() {
                         $("#order_status").text(data.str);
                         setTimeout(function () {
                             update_order_status();
-                        }, 3000);
+                        }, 2000);
                     }
                     if (data.status == status_delivered) {
                         toggle_status("badge-info", "badge-success");
@@ -47,6 +52,28 @@ function update_order_status() {
                         }
                     }
                     last_result = data.status;
+                }
+            }
+        });
+    }
+}
+
+// Update view order every 1 sec (in a realistic scenario that would be better off using REACT)
+function get_logs() {
+    if (order_id && last_result != status_delivered) {
+        $.ajax({
+            type: "PUT",
+            async: true,
+            url: "/logs/" + order_id,
+            success: function (data) {
+                if (data) {
+                    log_data.html(data);
+                    if (log_data_autoscroll.prop("checked")) {
+                        log_data.scrollTop(log_data[0].scrollHeight);
+                    }
+                    setTimeout(function () {
+                        get_logs();
+                    }, 1000);
                 }
             }
         });
