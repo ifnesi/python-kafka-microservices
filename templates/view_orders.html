@@ -1,7 +1,8 @@
-{% extends 'root.html' %}
+{% extends 'header.html' %}
 
 {% block content %}
-<h4><span class="badge badge-dark w-100">All orders&nbsp;&nbsp;<a href="/orders"><img
+{% include 'navbar.html' %}
+<h4><span class="badge badge-dark w-100">My orders&nbsp;&nbsp;<a href="/orders"><img
                 src="{{ url_for('static', filename='images/refresh.png') }}" title="Refresh page" width="24"
                 class="img_border" /></a></span></h4>
 <table class="table table-striped table-hover">
@@ -18,7 +19,7 @@
         <tr>
             <th><a href="/orders/{{order_id}}">{{order_id}}</a></th>
             <td>{{order.timestamp}}</td>
-            <td>{{order.name}}</td>
+            <td>{{order.username}}</td>
             <td>{{order.status_str}}</td>
         </tr>
         {% endfor %}

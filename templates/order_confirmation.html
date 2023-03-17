@@ -1,6 +1,7 @@
-{% extends 'root.html' %}
+{% extends 'header.html' %}
 
 {% block content %}
+{% include 'navbar.html' %}
 <h4><span class="badge badge-success w-100">We have received your order!</span></h4>
 <table class="table table-striped table-hover">
     <tbody>
@@ -12,7 +13,7 @@
         </tr>
         <tr>
             <th>Name</th>
-            <td>{{name}}</td>
+            <td>{{username}}</td>
         </tr>
         <tr>
             <th>Sauce</th>

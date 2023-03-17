@@ -1,0 +1,19 @@
+{% extends 'header.html' %}
+
+{% block content %}
+<form action="/login" class="needs-validation" method="POST">
+    <div class="row d-flex justify-content-center mt-3">
+        <div class="col-6">
+            <div class="col-12">
+                <div class="form-group">
+                    <label for="username">Username:</label>
+                    <input type="text" class="form-control" id="username" name="username" maxlength="16" required
+                        autocomplete="off">
+                </div>
+            </div>
+            <div class="col-12">
+                <button type="submit" class="btn btn-primary w-100">Login</button>
+            </div>
+        </div>
+</form>
+{% endblock %}

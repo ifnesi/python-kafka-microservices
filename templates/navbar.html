@@ -1,0 +1,31 @@
+<nav class="navbar navbar-expand-lg navbar-light pb-2">
+    <p class="navbar-brand"><img src="{{ url_for('static', filename='images/logo.png') }}" width=62
+            class="map img-resonsive" /></p>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+        aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <ul class="navbar-nav mr-auto">
+            <li class="nav-item active">
+                <a class="btn btn-outline-dark menu-link m-1" href="/" title="Place your order">View
+                    Menu</a>
+            </li>
+            <li class="nav-item active">
+                <a class="btn btn-outline-dark menu-link m-1" href="/orders" title="View my orders">My
+                    Orders</a>
+            </li>
+        </ul>
+        <div class="form-inline my-2 my-lg-0">
+            <input class="form-control mr-sm-2" type="order" placeholder="Order" id="order_id_query" aria-label="Search"
+                value="{{order_id}}">
+            <a href="javascript:void(0);" class="btn btn-outline-dark my-2 my-sm-0"
+                onClick="javascript:viewOrder();">Search</a>
+        </div>
+        <ul class="navbar-nav ml-auto">
+            <li class="nav-item active">
+                <a class="btn btn-outline-danger menu-link m-1" href="/logout">Logout</a>
+            </li>
+        </ul>
+    </div>
+</nav>

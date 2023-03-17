@@ -1,17 +1,9 @@
-{% extends 'root.html' %}
+{% extends 'header.html' %}
 
 {% block content %}
-<h4><span class="badge badge-dark w-100">Customise your pizza</span></h4>
+{% include 'navbar.html' %}
+<h4><span class="badge badge-dark w-100">{{session.username}}: Customise your pizza</span></h4>
 <form action="/" class="needs-validation" method="POST">
-    <div class="row">
-        <div class="col-12">
-            <div class="form-group">
-                <label for="name">Your name:</label>
-                <input type="text" class="form-control" name="name" required>
-                <div class="invalid-feedback">Please fill out this field.</div>
-            </div>
-        </div>
-    </div>
     <div class="row">
         <div class="col-3">
             <label for="sauce">Sauce:</label>
