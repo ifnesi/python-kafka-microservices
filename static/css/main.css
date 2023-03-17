@@ -20,7 +20,7 @@
     border-color: rgb(165, 165, 165);
 }
 
-.view_logs {
+.log_data {
     font-family: 'Courier New', Courier, monospace;
     font-size: 14px;
     color: #000;
@@ -30,4 +30,8 @@
     padding: 2px;
     border-width: 1px;
     background-color: #eee;
+    height: 400px;
+    overflow-y: scroll;
+    padding-left: 6px;
+    padding-right: 6px;
 }
