@@ -38,7 +38,7 @@ from utils import (
 # Global variables #
 ####################
 SCRIPT = get_script_name(__file__)
-log_ini(SCRIPT)
+log_ini(SCRIPT, to_disk=False)
 
 # Validate command arguments
 kafka_config_file, sys_config_file = validate_cli_args(SCRIPT)
@@ -93,8 +93,8 @@ KSQL_STATEMENTS = {
         timestamp BIGINT,
         order STRUCT<
             extra_toppings ARRAY<STRING>,
+            username STRING,
             customer_id STRING,
-            name STRING,
             sauce STRING,
             cheese STRING,
             main_topping STRING
@@ -151,19 +151,6 @@ KSQL_STATEMENTS = {
         TIMESTAMP='timestamp'
     );""",
     **PERSISTENT_QUERIES,
-    # TABLE_STATUS_SESSION: f"""CREATE TABLE IF NOT EXISTS {TABLE_STATUS_SESSION}
-    # WITH (
-    #     KAFKA_TOPIC='{TOPIC_STATUS_SESSION}',
-    #     VALUE_FORMAT='JSON'
-    # )
-    # AS
-    # SELECT
-    #     ORDER_ID,
-    #     MAX(STATUS) as STATUS_MAX
-    # FROM {STREAM_STATUS}
-    # WINDOW SESSION ({int(60 * SYS_CONFIG["state-store-orders"]["status_invalid_timeout_minutes"])} SECONDS)
-    # GROUP BY ORDER_ID
-    # EMIT FINAL;""",
 }
 
 if __name__ == "__main__":
