@@ -11,4 +11,8 @@ $(document).ready(function () {
             viewOrder();
         }
     });
+    $("form").submit(function () {
+        $(this).find(":submit").attr('disabled', 'disabled');
+        $(this).find(":submit").css('cursor', 'wait');
+    });
 });
