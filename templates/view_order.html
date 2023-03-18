@@ -16,7 +16,6 @@
         <tr>
             <th>Order</th>
             <th>Order Time</th>
-            <th>Name</th>
             <th>Status</th>
             <th>Order</th>
         </tr>
@@ -25,7 +24,6 @@
         <tr>
             <td><a href="/orders/{{order_id}}">{{order_id}}</a></td>
             <td>{{timestamp}}</td>
-            <td>{{username}}</td>
             <td><span class="badge {% if status == status_delivered %}badge-success{% else %}badge-info{% endif %}"
                     id="order_status">{{status_str}}</span></td>
             {% autoescape false %}

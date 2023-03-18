@@ -11,7 +11,6 @@
             <tr>
                 <th>Order</th>
                 <th>Order Time</th>
-                <th>Name</th>
                 <th>Status</th>
             </tr>
         </thead>
@@ -19,7 +18,6 @@
         <tr>
             <th><a href="/orders/{{order_id}}">{{order_id}}</a></th>
             <td>{{order.timestamp}}</td>
-            <td>{{order.username}}</td>
             <td>{{order.status_str}}</td>
         </tr>
         {% endfor %}
