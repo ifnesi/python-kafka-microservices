@@ -342,7 +342,7 @@ def view_logs_ajax(order_id: str):
     log_files = [
         os.path.join(FOLDER_LOGS, file)
         for file in os.listdir(FOLDER_LOGS)
-        if file.endswith(EXTENSION_LOGS)
+        if EXTENSION_LOGS in file
     ]
     for file in log_files:
         with open(file, "r") as f:
