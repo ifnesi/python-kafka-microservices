@@ -163,7 +163,7 @@ def log_event_received(event) -> None:
         except Exception:
             pass
     logging.info(
-        f"""Event received from topic '{event_data[0]},' key {event_data[1]}, value {event_data[2]}"""
+        f"""Event received\n- Topic: {event_data[0]}\n- Key: {event_data[1]}\n- Value: {event_data[2]}"""
     )
 
 
@@ -317,13 +317,13 @@ def get_custom_partitioner():
 
 def delivery_report(err, msg):
     """Reports the failure or success of an event delivery"""
+    msg_key = "" if msg.key() is None else msg.key().decode()
     if err is not None:
-        logging.error(f"Delivery failed for Data record {msg.key()}: {err}")
+        logging.error(f"Delivery failed for key '{msg_key}': {err}")
     else:
-        msg_key = "" if msg.key() is None else msg.key().decode()
         msg_value = "" if msg.value() is None else msg.value().decode()
         logging.info(
-            f"Event successfully produced\n - Topic '{msg.topic()}', Partition #{msg.partition()}, Offset #{msg.offset()}\n - Key: {msg_key}\n - Value: {msg_value}"
+            f"Event successfully produced\n- Topic {msg.topic()}, partition #{msg.partition()}, Offset #{msg.offset()}\n- Key: {msg_key}\n- Value: {msg_value}"
         )
 
 
