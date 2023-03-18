@@ -235,12 +235,11 @@ def order_pizza():
         )
         PRODUCER.flush()
 
-        return render_template(
-            "order_confirmation.html",
-            title="Confirmation",
-            order_id=order_id,
-            extra_toppings=", ".join(extra_toppings),
-            **request_form,
+        return redirect(
+            url_for(
+                "get_order",
+                order_id=order_id,
+            )
         )
 
 
@@ -348,19 +347,23 @@ def view_logs_ajax(order_id: str):
     for file in log_files:
         with open(file, "r") as f:
             lines = f.read().split("\x00")
-            logs += [line.replace("\n", "<br>") for line in lines if order_id in line]
+            logs += [
+                line.strip("\n").replace("\n", "<br>")
+                for line in lines
+                if order_id in line
+            ]
     if logs:
         logs.sort()  # sort lines by timestamp
-        logs = "".join(logs).strip("<br>") + "<br>" + "<br>"
+        logs = "<br><br>".join(logs)
         headers = re.findall(
-            "(\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}.\d{3}\s\[.+?\].+?:\s)",
+            "(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}.\d{3} \[.+?\].+?:)",
             logs,
         )
         for header in headers:
-            logs = logs.replace(header, f"""<b>{header.replace(": ", "<br>")}</b>""")
+            logs = logs.replace(header, f"""<b>{header.replace(": ", ":<br>")}</b>""")
     else:
         logs = f"No logs found for order_id {order_id}"
-    return logs
+    return logs.replace("<br>" * 3, "<br>" * 2) + "<br>" + "<br>"
 
 
 ########
