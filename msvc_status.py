@@ -124,9 +124,6 @@ def get_pizza_status():
                     logging.error(event.error())
                 else:
                     try:
-                        # Add a little delay just to allow the logs on the previous micro-service to be displayed first
-                        time.sleep(0.15)
-
                         log_event_received(event)
 
                         order_id = event.key().decode()
