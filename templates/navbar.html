@@ -1,6 +1,6 @@
-<nav class="navbar navbar-expand-lg navbar-light pb-2">
+<nav class="navbar navbar-expand-lg navbar-light mb-n2 pb-0">
     <p class="navbar-brand"><img src="{{ url_for('static', filename='images/logo.png') }}" width=62
-            class="map img-resonsive" /></p>
+            class="map img-responsive" /></p>
     <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
         aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>
@@ -8,18 +8,18 @@
     <div class="collapse navbar-collapse" id="navbarSupportedContent">
         <ul class="navbar-nav mr-auto">
             <li class="nav-item active">
-                <a class="btn btn-outline-dark menu-link m-1" href="/" title="Place your order">View
+                <a class="btn btn-outline-dark btn-sm menu-link m-1" href="/" title="Place your order">View
                     Menu</a>
             </li>
             <li class="nav-item active">
-                <a class="btn btn-outline-dark menu-link m-1" href="/orders" title="View my orders">My
+                <a class="btn btn-outline-dark btn-sm menu-link m-1" href="/orders" title="View my orders">My
                     Orders</a>
             </li>
         </ul>
-        <div class="form-inline my-2 my-lg-0">
-            <input class="form-control mr-sm-2" type="order" placeholder="Order" id="order_id_query" aria-label="Search"
-                value="{{order_id}}">
-            <a href="javascript:void(0);" class="btn btn-outline-dark my-2 my-sm-0"
+        <div class="form-inline">
+            <input class="form-control form-control-sm" type="order" placeholder="Order" id="order_id_query"
+                aria-label="Search" value="{{order_id}}">
+            <a href="javascript:void(0);" class="btn btn-outline-success btn-sm ml-1"
                 onClick="javascript:viewOrder();">Search</a>
         </div>
         <ul class="navbar-nav ml-auto">
@@ -28,18 +28,18 @@
                     {{session.username}}
                 </a>
                 <ul class="dropdown-menu">
-                    <li><small class="dropdown-item disabled">Documentation</small></li>
-                    <li><a class="dropdown-item"
+                    <li><a class="dropdown-item small"
                             href="{{ url_for('static', filename='images/docs/gen_architecture.png') }}"
                             target="_blank">Demo Architecture</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('static', filename='images/docs/service_flow.png') }}"
-                            target="_blank">Demo Service Flow</a></li>
-                    <li><a class="dropdown-item" href="https://github.com/ifnesi/python-kafka-microservices"
+                    <li><a class="dropdown-item small"
+                            href="{{ url_for('static', filename='images/docs/service_flow.png') }}" target="_blank">Demo
+                            Service Flow</a></li>
+                    <li><a class="dropdown-item small" href="https://github.com/ifnesi/python-kafka-microservices"
                             target="_blank">Github repo</a></li>
                     <li>
                         <hr class="dropdown-divider">
                     </li>
-                    <li><a class="dropdown-item" href="/logout">Logout</a></li>
+                    <li><a class="dropdown-item small" href="/logout">Logout</a></li>
                 </ul>
             </li>
         </ul>

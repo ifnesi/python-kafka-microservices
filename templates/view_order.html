@@ -9,9 +9,9 @@
 <p class="font-weight-bold text-danger">{{error}}</p>
 {% else %}
 {% block header %}
-<script src="{{ url_for('static', filename='js/ajax_order.js') }}?v=6"></script>
+<script src="{{ url_for('static', filename='js/ajax_order.js') }}?v=7"></script>
 {% endblock %}
-<table class="table table-striped table-hover">
+<table class="table table-striped table-hover table-sm small mb-1">
     <thead>
         <tr>
             <th>Order</th>
@@ -34,11 +34,15 @@
         </tr>
     </tbody>
 </table>
+<div class="row justify-content-center">
+    <img src="{{ url_for('static', filename='images/msvc_flow.png') }}" class="mt-0 mb-1" title="Microservices flow"
+        height="144" />
+</div>
 {% autoescape false %}
-<div id="log_data" class="log_data mb-0"></div>
+<div id="log_data" class="log_data mb-1"></div>
 {% endautoescape %}
-<div class="form-check">
-    <label class="form-check-label">
+<div class="form-check mt-n2 pt-0">
+    <label class="form-check-label small">
         <input type="checkbox" class="form-check-input" value="" checked id="log_data_autoscroll">Logs auto scroll
     </label>
 </div>

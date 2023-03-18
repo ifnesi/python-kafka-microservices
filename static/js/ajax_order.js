@@ -3,6 +3,7 @@ var log_data_autoscroll;
 var order_id;
 var status_delivered;
 var last_result = -1;
+var one_last_call = 0;
 
 $(document).ready(function () {
     log_data = $("#log_data");
@@ -60,22 +61,29 @@ function update_order_status() {
 
 // Update view order every 1 sec (in a realistic scenario that would be better off using REACT)
 function get_logs() {
-    if (order_id && last_result != status_delivered) {
-        $.ajax({
-            type: "PUT",
-            async: true,
-            url: "/logs/" + order_id,
-            success: function (data) {
-                if (data) {
-                    log_data.html(data);
-                    if (log_data_autoscroll.prop("checked")) {
-                        log_data.scrollTop(log_data[0].scrollHeight);
+    if (order_id) {
+        if (one_last_call == 0) {
+            $.ajax({
+                type: "PUT",
+                async: true,
+                url: "/logs/" + order_id,
+                success: function (data) {
+                    if (data) {
+                        if (data != log_data.html()) {
+                            log_data.html(data);
+                            if (log_data_autoscroll.prop("checked")) {
+                                log_data.scrollTop(log_data[0].scrollHeight);
+                            }
+                        }
+                        setTimeout(function () {
+                            get_logs();
+                        }, 1000);
                     }
-                    setTimeout(function () {
-                        get_logs();
-                    }, 1000);
                 }
-            }
-        });
+            });
+        }
+        if (last_result == status_delivered) {
+            one_last_call += 1;
+        }
     }
 }

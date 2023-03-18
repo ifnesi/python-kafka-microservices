@@ -6,11 +6,11 @@
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/favicon.ico') }}">
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}?v=6">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}?v=6">
-    <script src="{{ url_for('static', filename='js/jquery.min.js') }}?v=6"></script>
-    <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}?v=6"></script>
-    <script src="{{ url_for('static', filename='js/main.js') }}?v=6"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}?v=7">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}?v=7">
+    <script src="{{ url_for('static', filename='js/jquery.min.js') }}?v=7"></script>
+    <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}?v=7"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}?v=7"></script>
     {% block header %}{% endblock %}
 </head>
 
@@ -21,7 +21,7 @@
                 {% block content %}{% endblock %}
             </div>
         </div>
-        <div class="row mt-3">
+        <div class="mt-1">
             <div class="col-12">
                 <p class="text-center text-secondary small">Order your pizza with <b>Confluent</b>, powered by <a
                         href="https://www.confluent.io/confluent-cloud" target="_blank">Confluent Cloud</a>&copy;</p>
