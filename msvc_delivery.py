@@ -157,7 +157,7 @@ def receive_pizza_baked():
                 else:
                     try:
                         # Add a little delay just to allow the logs on the previous micro-service to be displayed first
-                        time.sleep(0.15)
+                        time.sleep(0.2)
 
                         log_event_received(event)
 
