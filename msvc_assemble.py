@@ -137,7 +137,7 @@ def receive_orders():
                             )
 
                             # Assemble pizza
-                            assembling_time = seed % 5 + 2
+                            assembling_time = seed % 8 + 4
                             logging.info(
                                 f"Preparing order '{order_id}', assembling time is {assembling_time} second(s)"
                             )
@@ -145,7 +145,7 @@ def receive_orders():
                             logging.info(f"Order '{order_id}' is assembled!")
 
                             # Update kafka topics
-                            baking_time = seed % 10 + 10
+                            baking_time = seed % 8 + 8
                             pizza_assembled(
                                 order_id,
                                 baking_time,
