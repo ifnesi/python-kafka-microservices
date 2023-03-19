@@ -323,7 +323,7 @@ def delivery_report(err, msg):
     else:
         msg_value = "" if msg.value() is None else msg.value().decode()
         logging.info(
-            f"Event successfully produced\n- Topic {msg.topic()}, partition #{msg.partition()}, Offset #{msg.offset()}\n- Key: {msg_key}\n- Value: {msg_value}"
+            f"Event successfully produced\n- Topic: {msg.topic()}, partition #{msg.partition()}, Offset #{msg.offset()}\n- Key: {msg_key}\n- Value: {msg_value}"
         )
 
 
