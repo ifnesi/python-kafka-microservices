@@ -54,9 +54,10 @@ class DB(BaseStateStore):
     def execute(
         self,
         expression: str,
+        parameters: list = None,
         commit: bool = False,
     ):
-        result = self.cur.execute(expression)
+        result = self.cur.execute(expression, parameters or list())
         if commit:
             self.conn.commit()
         return result
@@ -101,7 +102,7 @@ class DB(BaseStateStore):
         self.execute(
             f"""SELECT * FROM {self.sys_config["state-store-orders"]["table_status"]}
                 WHERE
-                    timestamp < {timestamp_now() - self.sys_config["state-store-orders"]["status_invalid_timeout_minutes"] * 60 * 1000}
+                    timestamp < {timestamp_now()- self.sys_config["state-store-orders"]["status_invalid_timeout_minutes"]* 60 * 1000}
                     AND status NOT IN ({",".join([str(s) for s in self.sys_config["state-store-orders"]["status_completed_when"]])})
             """,
             commit=False,
@@ -125,8 +126,11 @@ class DB(BaseStateStore):
         self.execute(
             f"""DELETE FROM {self.sys_config["state-store-orders"]["table_status"]}
                 WHERE
-                    order_id = '{order_id}'
+                    order_id=?
             """,
+            parameters=[
+                order_id,
+            ],
             commit=True,
         )
 
@@ -151,7 +155,11 @@ class DB(BaseStateStore):
         self.execute(
             f"""SELECT * FROM {self.sys_config["state-store-delivery"]["table_customers"]}
                 WHERE
-                    order_id='{order_id}'""",
+                    order_id=?
+            """,
+            parameters=[
+                order_id,
+            ],
             commit=False,
         )
         data = self.cur.fetchone()
@@ -165,14 +173,18 @@ class DB(BaseStateStore):
         order_id: str,
         customer_id: str = None,
     ) -> dict:
-        where_clause = f"order_id='{order_id}'"
+        where_clause = "order_id=?"
+        parameters = [order_id]
         if customer_id is not None:
-            where_clause += f" AND customer_id='{customer_id}'"
+            where_clause += " AND customer_id=?"
+            parameters.append(customer_id)
         self.execute(
             f"""SELECT * FROM {self.sys_config["state-store-orders"]["table_orders"]}
                 WHERE
-                    {where_clause}""",
+                    {where_clause}
+            """,
             commit=False,
+            parameters=parameters,
         )
         data = self.cur.fetchone()
         if data is not None:
@@ -191,9 +203,13 @@ class DB(BaseStateStore):
         self.execute(
             f"""SELECT * FROM {self.sys_config["state-store-orders"]["table_orders"]}
             WHERE
-                customer_id='{customer_id}'
+                customer_id=?
             ORDER BY
-                timestamp DESC""",
+                timestamp DESC
+            """,
+            parameters=[
+                customer_id,
+            ],
             commit=False,
         )
         data = self.cur.fetchall()
@@ -228,8 +244,11 @@ class DB(BaseStateStore):
             f"""UPDATE {self.sys_config["state-store-orders"]["table_orders"]} SET
                     status={status}
                 WHERE
-                    order_id='{order_id}'
+                    order_id=?
             """,
+            parameters=[
+                order_id,
+            ],
             commit=True,
         )
 
@@ -238,21 +257,26 @@ class DB(BaseStateStore):
         order_id: str,
         status: int,
     ):
+        timestamp = timestamp_now()
         self.execute(
             f"""INSERT INTO {self.sys_config["state-store-orders"]["table_status"]} (
                 order_id,
                 timestamp,
                 status
             ) VALUES (
-                '{order_id}',
-                {timestamp_now()},
+                ?,
+                {timestamp},
                 {status}
             ) ON CONFLICT (order_id) DO UPDATE SET
-                timestamp={timestamp_now()},
+                timestamp={timestamp},
                 status={status}
             WHERE
-                order_id='{order_id}'
+                order_id=?
             """,
+            parameters=[
+                order_id,
+                order_id,
+            ],
             commit=True,
         )
 
@@ -264,10 +288,14 @@ class DB(BaseStateStore):
         self.execute(
             f"""UPDATE {self.sys_config["state-store-delivery"]["table_customers"]} SET
                     timestamp={timestamp_now()},
-                    customer_id='{customer_id}'
+                    customer_id=?
                 WHERE
-                    order_id='{order_id}'
+                    order_id=?
             """,
+            parameters=[
+                customer_id,
+                order_id,
+            ],
             commit=True,
         )
 
@@ -283,10 +311,14 @@ class DB(BaseStateStore):
                 customer_id
             )
             VALUES (
-                '{order_id}',
+                ?,
                 {timestamp_now()},
-                '{customer_id}'
+                ?
             )""",
+            parameters=[
+                order_id,
+                customer_id,
+            ],
             commit=True,
         )
 
@@ -308,15 +340,24 @@ class DB(BaseStateStore):
                 extras
             )
             VALUES (
-                '{order_id}',
+                ?,
                 {timestamp_now()},
-                '{order_details["order"]["username"]}',
-                '{order_details["order"]["customer_id"]}',
+                ?,
+                ?,
                 {self.sys_config["status-id"]["order_placed"]},
-                '{order_details["order"]["sauce"]}',
-                '{order_details["order"]["cheese"]}',
-                '{order_details["order"]["main_topping"]}',
-                '{",".join(order_details["order"]["extra_toppings"])}'
+                ?,
+                ?,
+                ?,
+                ?
             )""",
+            parameters=[
+                order_id,
+                order_details["order"]["username"],
+                order_details["order"]["customer_id"],
+                order_details["order"]["sauce"],
+                order_details["order"]["cheese"],
+                order_details["order"]["main_topping"],
+                ",".join(order_details["order"]["extra_toppings"]),
+            ],
             commit=True,
         )
