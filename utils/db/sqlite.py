@@ -57,7 +57,10 @@ class DB(BaseStateStore):
         parameters: list = None,
         commit: bool = False,
     ):
-        result = self.cur.execute(expression, parameters or list())
+        result = self.cur.execute(
+            expression,
+            parameters or list(),
+        )
         if commit:
             self.conn.commit()
         return result
