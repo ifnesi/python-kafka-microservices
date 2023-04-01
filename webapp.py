@@ -23,7 +23,7 @@ import uuid
 import logging
 import datetime
 
-from flask import Flask, render_template, request, session, redirect, url_for
+from flask import Flask, render_template, request, session, redirect, url_for, jsonify
 from flask_login import (
     UserMixin,
     LoginManager,
@@ -338,32 +338,48 @@ def get_order(order_id: str):
 @login_required
 def view_logs_ajax(order_id: str):
     """View logs (AJAX call)"""
-    logs = list()
+    msvc_logs = {
+        "all_logs": list(),
+    }
     log_files = [
         os.path.join(FOLDER_LOGS, file)
         for file in os.listdir(FOLDER_LOGS)
         if EXTENSION_LOGS in file
     ]
     for file in log_files:
+        msvc_name = os.path.splitext(os.path.splitext(os.path.split(file)[-1])[0])[0]
+        if msvc_name not in msvc_logs.keys():
+            msvc_logs[msvc_name] = list()
         with open(file, "r") as f:
             lines = f.read().split("\x00")
-            logs += [
+            lines = [
                 line.strip("\n").replace("\n", "<br>")
                 for line in lines
                 if order_id in line
             ]
-    if logs:
-        logs.sort()  # sort lines by timestamp
-        logs = "<br><br>".join(logs)
-        headers = re.findall(
-            "(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}.\d{3} \[.+?\].+?:)",
-            logs,
-        )
-        for header in headers:
-            logs = logs.replace(header, f"""<b>{header.replace(": ", ":<br>")}</b>""")
+            msvc_logs["all_logs"] += lines
+            msvc_logs[msvc_name] += lines
+    if msvc_logs["all_logs"]:
+        for k in msvc_logs.keys():
+            msvc_logs[k].sort()  # sort lines by timestamp
+            msvc_logs[k] = "<br><br>".join(msvc_logs[k])
+            headers = re.findall(
+                "(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}.\d{3} \[.+?\].+?:)",
+                msvc_logs[k],
+            )
+            for header in headers:
+                msvc_logs[k] = msvc_logs[k].replace(
+                    header, f"""<b>{header.replace(": ", ":<br>")}</b>"""
+                )
+        for k in msvc_logs.keys():
+            msvc_logs[k] = (
+                msvc_logs[k].replace("<br>" * 3, "<br>" * 2) + "<br>" + "<br>"
+            )
     else:
-        logs = f"No logs found for order_id {order_id}"
-    return logs.replace("<br>" * 3, "<br>" * 2) + "<br>" + "<br>"
+        msvc_logs = {
+            "all_logs": f"No logs found for order_id {order_id}",
+        }
+    return jsonify(msvc_logs)
 
 
 ########

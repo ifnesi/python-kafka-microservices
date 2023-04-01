@@ -9,7 +9,7 @@
 <p class="font-weight-bold text-danger">{{error}}</p>
 {% else %}
 {% block header %}
-<script src="{{ url_for('static', filename='js/ajax_order.js') }}?v=7"></script>
+<script src="{{ url_for('static', filename='js/ajax_order.js') }}?v=8"></script>
 {% endblock %}
 <table class="table table-striped table-hover table-sm small mb-1">
     <thead>
@@ -32,9 +32,8 @@
         </tr>
     </tbody>
 </table>
-<div class="row justify-content-center">
-    <img src="{{ url_for('static', filename='images/msvc_flow.png') }}" class="mt-0 mb-1" title="Microservices flow"
-        height="144" />
+<div class="row justify-content-center pb-2">
+    {% include 'msvc_flow.html' %}
 </div>
 {% autoescape false %}
 <div id="log_data" class="log_data mb-1"></div>

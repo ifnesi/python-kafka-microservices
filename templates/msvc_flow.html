@@ -1,0 +1,127 @@
+<table class="tab-msvc">
+    <tr>
+        <td colspan="2"></td>
+        <td colspan="7">
+            <img src="{{ url_for('static', filename='images/arrow.png') }}" height="20px" width="80%" />
+        </td>
+    </tr>
+    <tr>
+        <td rowspan="3" class="tab-msvc-border "><img
+                src="{{ url_for('static', filename='images/msvc_local_cache.png') }}" height="57px" /></td>
+        <td>&harr;</td>
+        <td class="tab-msvc-border tab-msvc-click"><img src="{{ url_for('static', filename='images/msvc_webapp.png') }}"
+                height="114px" width="90%" title="View web application logs" data-toggle="modal"
+                data-target="#webapp" />
+            <div class="modal" id="webapp">
+                <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                    <div class="modal-content">
+                        <div class="modal-header m-0 p-1">
+                            <h5 class="modal-title">Web Application</h5>
+                            <button type="button" class="close" data-dismiss="modal">&times;</button>
+                        </div>
+                        <div class="modal-body m-0 p-1 text-left log_data" id="webapp_data">
+                        </div>
+                        <div class="modal-footer m-0 p-1">
+                            <button type="button" class="btn btn-sm btn-danger" data-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </td>
+        <td>&rarr;</td>
+        <td class="tab-msvc-border tab-msvc-click"><img
+                src="{{ url_for('static', filename='images/msvc_assemble.png') }}" height="114px" width="90%"
+                title="View microservices logs" data-toggle="modal" data-target="#msvc_assemble" />
+            <div class="modal" id="msvc_assemble">
+                <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                    <div class="modal-content">
+                        <div class="modal-header m-0 p-1">
+                            <h5 class="modal-title">Microservice Assemble</h5>
+                            <button type="button" class="close" data-dismiss="modal">&times;</button>
+                        </div>
+                        <div class="modal-body m-0 p-1 text-left log_data" id="msvc_assemble_data">
+                        </div>
+                        <div class="modal-footer m-0 p-1">
+                            <button type="button" class="btn btn-sm btn-danger" data-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </td>
+        <td>&rarr;</td>
+        <td class="tab-msvc-border tab-msvc-click"><img src="{{ url_for('static', filename='images/msvc_bake.png') }}"
+                height="
+                114px" width="90%" title="View microservices logs" data-toggle="modal" data-target="#msvc_bake" />
+            <div class="modal" id="msvc_bake">
+                <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                    <div class="modal-content">
+                        <div class="modal-header m-0 p-1">
+                            <h5 class="modal-title">Microservice Bake</h5>
+                            <button type="button" class="close" data-dismiss="modal">&times;</button>
+                        </div>
+                        <div class="modal-body m-0 p-1 text-left log_data" id="msvc_bake_data">
+                        </div>
+                        <div class="modal-footer m-0 p-1">
+                            <button type="button" class="btn btn-sm btn-danger" data-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </td>
+        <td>&rarr;</td>
+        <td class="tab-msvc-border tab-msvc-click"><img
+                src="{{ url_for('static', filename='images/msvc_delivery.png') }}" height="114px" width="90%"
+                title="View microservices logs" data-toggle="modal" data-target="#msvc_delivery" />
+            <div class="modal" id="msvc_delivery">
+                <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                    <div class="modal-content">
+                        <div class="modal-header m-0 p-1">
+                            <h5 class="modal-title">Microservice Delivery</h5>
+                            <button type="button" class="close" data-dismiss="modal">&times;</button>
+                        </div>
+                        <div class="modal-body m-0 p-1 text-left log_data" id="msvc_delivery_data">
+                        </div>
+                        <div class="modal-footer m-0 p-1">
+                            <button type="button" class="btn btn-sm btn-danger" data-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </td>
+        </td>
+    </tr>
+    <tr>
+        <td colspan="2"></td>
+        <td>&#8600;</td>
+        <td>&darr;</td>
+        <td></td>
+        <td>&darr;</td>
+        <td></td>
+        <td>&darr;</td>
+    </tr>
+    <tr>
+        <td>&harr;</td>
+        <td class="tab-msvc-border tab-msvc-click"><img src="{{ url_for('static', filename='images/msvc_status.png') }}"
+                height="57px" width="90%" title="View microservices logs" data-toggle="modal"
+                data-target="#msvc_status" />
+            <div class="modal" id="msvc_status">
+                <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                    <div class="modal-content">
+                        <div class="modal-header m-0 p-1">
+                            <h5 class="modal-title">Microservice Status</h5>
+                            <button type="button" class="close" data-dismiss="modal">&times;</button>
+                        </div>
+                        <div class="modal-body m-0 p-1 text-left log_data" id="msvc_status_data">
+                        </div>
+                        <div class="modal-footer m-0 p-1">
+                            <button type="button" class="btn btn-sm btn-danger" data-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+        </td>
+        <td>&larr;</td>
+        <td class="tab-msvc-border" colspan="6"><img src="{{ url_for('static', filename='images/msvc_ksqldb.png') }}"
+                height="57px" />
+        </td>
+    </tr>
+</table>

@@ -67,13 +67,29 @@ function get_logs() {
                 type: "PUT",
                 async: true,
                 url: "/logs/" + order_id,
+                dataType: "json",
                 success: function (data) {
                     if (data) {
-                        if (data != log_data.html()) {
-                            log_data.html(data);
+                        if (data.all_logs != log_data.html()) {
+                            log_data.html(data.all_logs);
                             if (log_data_autoscroll.prop("checked")) {
                                 log_data.scrollTop(log_data[0].scrollHeight);
                             }
+                        }
+                        if (data.webapp) {
+                            $("#webapp_data").html(data.webapp);
+                        }
+                        if (data.msvc_assemble) {
+                            $("#msvc_assemble_data").html(data.msvc_assemble);
+                        }
+                        if (data.msvc_bake) {
+                            $("#msvc_bake_data").html(data.msvc_bake);
+                        }
+                        if (data.msvc_delivery) {
+                            $("#msvc_delivery_data").html(data.msvc_delivery);
+                        }
+                        if (data.msvc_status) {
+                            $("#msvc_status_data").html(data.msvc_status);
                         }
                         setTimeout(function () {
                             get_logs();
