@@ -46,8 +46,6 @@ from utils import (
     validate_cli_args,
     get_system_config,
     set_producer_consumer,
-    get_topic_partitions,
-    get_custom_partitioner,
     import_state_store_class,
 )
 
@@ -68,7 +66,7 @@ SYS_CONFIG = get_system_config(sys_config_file)
 
 # Set producer object
 PRODUCE_TOPIC_ORDERED = SYS_CONFIG["kafka-topics"]["pizza_ordered"]
-_, PRODUCER, _, ADMIN_CLIENT = set_producer_consumer(
+_, PRODUCER, _, _ = set_producer_consumer(
     kafka_config_file,
     producer_extra_config={
         "on_delivery": delivery_report,
@@ -76,8 +74,6 @@ _, PRODUCER, _, ADMIN_CLIENT = set_producer_consumer(
     },
     disable_consumer=True,
 )
-CUSTOM_PARTITIONER = get_custom_partitioner()
-PARTITIONS_ORDERED = get_topic_partitions(ADMIN_CLIENT, PRODUCE_TOPIC_ORDERED)
 
 # Set signal handler
 GRACEFUL_SHUTDOWN = GracefulShutdown()
@@ -231,7 +227,6 @@ def order_pizza():
             PRODUCE_TOPIC_ORDERED,
             key=order_id,
             value=json.dumps(order_details).encode(),
-            partition=CUSTOM_PARTITIONER(order_id.encode(), PARTITIONS_ORDERED),
         )
         PRODUCER.flush()
 

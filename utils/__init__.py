@@ -29,8 +29,6 @@ from confluent_kafka import Producer, Consumer
 from logging.handlers import TimedRotatingFileHandler
 from confluent_kafka.admin import AdminClient
 
-from utils.murmur2 import Murmur2Partitioner
-
 
 ####################
 # Global variables #
@@ -260,8 +258,12 @@ def set_producer_consumer(
 
     # Set producer config
     if not disable_producer:
+        producer_common_config = {
+            "partitioner": "murmur2_random",
+        }
         producer = Producer(
             {
+                **producer_common_config,
                 **config_kafka,
                 **producer_extra_config,
             }
@@ -278,8 +280,8 @@ def set_producer_consumer(
         }
         consumer = Consumer(
             {
-                **config_kafka,
                 **consumer_common_config,
+                **config_kafka,
                 **consumer_extra_config,
             }
         )
@@ -308,11 +310,6 @@ def get_topic_partitions(
     else:
         partitions = default_partition_number
     return partitions
-
-
-def get_custom_partitioner():
-    p = Murmur2Partitioner()
-    return p.partition
 
 
 def delivery_report(err, msg):
