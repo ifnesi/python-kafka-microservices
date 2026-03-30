@@ -1,127 +1,201 @@
-<table class="tab-msvc">
-    <tr>
-        <td colspan="2"></td>
-        <td colspan="7">
-            <img src="{{ url_for('static', filename='images/arrow.png') }}" height="20px" width="80%" />
-        </td>
-    </tr>
-    <tr>
-        <td rowspan="3" class="tab-msvc-border "><img
-                src="{{ url_for('static', filename='images/msvc_local_cache.png') }}" height="57px" /></td>
-        <td>&harr;</td>
-        <td class="tab-msvc-border tab-msvc-click"><img src="{{ url_for('static', filename='images/msvc_webapp.png') }}"
-                height="114px" width="90%" title="View web application logs" data-toggle="modal"
-                data-target="#webapp" />
-            <div class="modal" id="webapp">
-                <div class="modal-dialog modal-xl modal-dialog-scrollable">
-                    <div class="modal-content">
-                        <div class="modal-header m-0 p-1">
-                            <h5 class="modal-title">Web Application</h5>
-                            <button type="button" class="close" data-dismiss="modal">&times;</button>
-                        </div>
-                        <div class="modal-body m-0 p-1 text-left log_data" id="webapp_data">
-                        </div>
-                        <div class="modal-footer m-0 p-1">
-                            <button type="button" class="btn btn-sm btn-danger" data-dismiss="modal">Close</button>
-                        </div>
-                    </div>
+<div class="service-flow-wrapper">
+    <table class="flow-table" border="0" cellspacing="0" cellpadding="5">
+        <tr>
+            <td></td>
+            <td></td>
+            <td class="arrow-cell-right">
+                <img src="{{ url_for('static', filename='images/arrow-up-right.png') }}" width="50" class="map img-fluid" />
+                <img src="{{ url_for('static', filename='images/3-dots.png') }}" width="20" class="map img-fluid" style="padding-bottom: 16px;"/>
+                <img src="{{ url_for('static', filename='images/3-dots.png') }}" width="20" class="map img-fluid" style="padding-bottom: 16px;"/>
+                <img src="{{ url_for('static', filename='images/3-dots.png') }}" width="20" class="map img-fluid" style="padding-bottom: 16px;"/>
+            </td>
+            <td></td>
+            <td>
+                <img src="{{ url_for('static', filename='images/3-dots.png') }}" width="20" class="map img-fluid" style="padding-bottom: 16px;"/>
+                <img src="{{ url_for('static', filename='images/3-dots.png') }}" width="20" class="map img-fluid" style="padding-bottom: 16px;"/>
+                <img src="{{ url_for('static', filename='images/3-dots.png') }}" width="20" class="map img-fluid" style="padding-bottom: 16px;"/>
+                <img src="{{ url_for('static', filename='images/3-dots.png') }}" width="20" class="map img-fluid" style="padding-bottom: 16px;"/>
+                <img src="{{ url_for('static', filename='images/3-dots.png') }}" width="20" class="map img-fluid" style="padding-bottom: 16px;"/>
+                <img src="{{ url_for('static', filename='images/3-dots.png') }}" width="20" class="map img-fluid" style="padding-bottom: 16px;"/>
+                <img src="{{ url_for('static', filename='images/3-dots.png') }}" width="20" class="map img-fluid" style="padding-bottom: 16px;"/>
+                <img src="{{ url_for('static', filename='images/3-dots.png') }}" width="20" class="map img-fluid" style="padding-bottom: 16px;"/>
+            </td>
+            <td></td>
+            <td>
+                <img src="{{ url_for('static', filename='images/3-dots.png') }}" width="20" class="map img-fluid" style="padding-bottom: 16px;"/>
+                <img src="{{ url_for('static', filename='images/3-dots.png') }}" width="20" class="map img-fluid" style="padding-bottom: 16px;"/>
+                <img src="{{ url_for('static', filename='images/3-dots.png') }}" width="20" class="map img-fluid" style="padding-bottom: 16px;"/>
+                <img src="{{ url_for('static', filename='images/3-dots.png') }}" width="20" class="map img-fluid" style="padding-bottom: 16px;"/>
+                <img src="{{ url_for('static', filename='images/3-dots.png') }}" width="20" class="map img-fluid" style="padding-bottom: 16px;"/>
+                <img src="{{ url_for('static', filename='images/3-dots.png') }}" width="20" class="map img-fluid" style="padding-bottom: 16px;"/>
+                <img src="{{ url_for('static', filename='images/3-dots.png') }}" width="20" class="map img-fluid" style="padding-bottom: 16px;"/>
+                <img src="{{ url_for('static', filename='images/3-dots.png') }}" width="20" class="map img-fluid" style="padding-bottom: 16px;"/>
+            </td>
+            <td></td>
+            <td class="arrow-cell-left">
+                <img src="{{ url_for('static', filename='images/3-dots.png') }}" width="20" class="map img-fluid" style="padding-bottom: 16px;"/>
+                <img src="{{ url_for('static', filename='images/3-dots.png') }}" width="20" class="map img-fluid" style="padding-bottom: 16px;"/>
+                <img src="{{ url_for('static', filename='images/3-dots.png') }}" width="20" class="map img-fluid" style="padding-bottom: 16px;"/>
+                <img src="{{ url_for('static', filename='images/arrow-turn.png') }}" width="50" class="map img-fluid" />
+            </td>
+        </tr>
+
+        <!-- Row 1: Main Services -->
+        <tr>
+            <!-- Local Cache - spans rows 1 and 2 -->
+            <td rowspan="3" class="service-cell">
+                <div class="service-card">
+                    <img src="{{ url_for('static', filename='images/cache.png') }}" width="100" class="map img-fluid" />
+                    <div class="service-label">Local<br>Cache</div>
+                </div>
+            </td>
+            <td class="arrow-cell"><img src="{{ url_for('static', filename='images/arrow-bi.png') }}" width="50" class="map img-fluid" /></td>
+
+            <!-- Web Application -->
+            <td class="service-cell border-primary">
+                <div class="service-card service-clickable" data-bs-toggle="modal" data-bs-target="#webapp">
+                    <img src="{{ url_for('static', filename='images/store.png') }}" width="100" class="map img-fluid" />
+                    <div class="service-label">Web App</div>
+                </div>
+            </td>
+            <td class="arrow-cell"><img src="{{ url_for('static', filename='images/arrow-right.png') }}" width="50" class="map img-fluid" /></td>
+
+            <!-- Assembly -->
+            <td class="service-cell border-warning">
+                <div class="service-card service-clickable" data-bs-toggle="modal" data-bs-target="#msvc_assemble">
+                    <img src="{{ url_for('static', filename='images/assemble.png') }}" width="100" class="map img-fluid" />
+                    <div class="service-label">Assemble</div>
+                </div>
+            </td>
+            <td class="arrow-cell"><img src="{{ url_for('static', filename='images/arrow-right.png') }}" width="50" class="map img-fluid" /></td>
+
+            <!-- Bake -->
+            <td class="service-cell border-danger">
+                <div class="service-card service-clickable" data-bs-toggle="modal" data-bs-target="#msvc_bake">
+                    <img src="{{ url_for('static', filename='images/oven.png') }}" width="90" class="map img-fluid" />
+                    <div class="service-label">Bake</div>
+                </div>
+            </td>
+            <td class="arrow-cell"><img src="{{ url_for('static', filename='images/arrow-right.png') }}" width="50" class="map img-fluid" /></td>
+
+            <!-- Delivery -->
+            <td class="service-cell border-success">
+                <div class="service-card service-clickable" data-bs-toggle="modal" data-bs-target="#msvc_delivery">
+                    <img src="{{ url_for('static', filename='images/delivery.png') }}" width="100" class="map img-fluid" />
+                    <div class="service-label">Delivery</div>
+                </div>
+            </td>
+        </tr>
+
+        <!-- Row 2: Arrow row -->
+        <tr>
+            <!-- Cache continues from row 1 -->
+            <td></td>
+            <td></td>
+            <td class="arrow-cell"><img src="{{ url_for('static', filename='images/arrow-down-right.png') }}" width="50" class="map img-fluid" /></td>
+            <td class="arrow-cell"><img src="{{ url_for('static', filename='images/arrow-down.png') }}" width="50" class="map img-fluid" /></td>
+            <td></td>
+            <td class="arrow-cell"><img src="{{ url_for('static', filename='images/arrow-down.png') }}" width="50" class="map img-fluid" /></td>
+            <td></td>
+            <td class="arrow-cell"><img src="{{ url_for('static', filename='images/arrow-down.png') }}" width="50" class="map img-fluid" /></td>
+        </tr>
+
+        <!-- Row 3: Status and ksqlDB -->
+        <tr>
+            <td class="arrow-cell"><img src="{{ url_for('static', filename='images/arrow-bi.png') }}" width="50" class="map img-fluid" /></td>
+
+            <!-- Status -->
+            <td class="service-cell border-info">
+                <div class="service-card service-card-small service-clickable" data-bs-toggle="modal" data-bs-target="#msvc_status">
+                    <img src="{{ url_for('static', filename='images/status.png') }}" width="55" class="map img-fluid" />
+                    <div class="service-label">Status</div>
+                </div>
+            </td>
+            <td class="arrow-cell"><img src="{{ url_for('static', filename='images/arrow-left.png') }}" width="50" class="map img-fluid" /></td>
+
+            <!-- ksqlDB - spans 5 columns -->
+            <td colspan="5" class="service-cell border-dark">
+                <div class="service-card service-card-wide">
+                    <img src="{{ url_for('static', filename='images/flink.png') }}" width="65" class="map img-fluid" />
+                    <div class="service-label fw-bold">&nbsp;&nbsp;Stream Processor</div>
+                </div>
+            </td>
+        </tr>
+    </table>
+
+    <!-- Modals -->
+    <div class="modal fade" id="webapp">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Web Application</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body log_data" id="webapp_data"></div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                 </div>
             </div>
-        </td>
-        <td>&rarr;</td>
-        <td class="tab-msvc-border tab-msvc-click"><img
-                src="{{ url_for('static', filename='images/msvc_assemble.png') }}" height="114px" width="90%"
-                title="View microservices logs" data-toggle="modal" data-target="#msvc_assemble" />
-            <div class="modal" id="msvc_assemble">
-                <div class="modal-dialog modal-xl modal-dialog-scrollable">
-                    <div class="modal-content">
-                        <div class="modal-header m-0 p-1">
-                            <h5 class="modal-title">Microservice Assemble</h5>
-                            <button type="button" class="close" data-dismiss="modal">&times;</button>
-                        </div>
-                        <div class="modal-body m-0 p-1 text-left log_data" id="msvc_assemble_data">
-                        </div>
-                        <div class="modal-footer m-0 p-1">
-                            <button type="button" class="btn btn-sm btn-danger" data-dismiss="modal">Close</button>
-                        </div>
-                    </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="msvc_assemble">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Microservice Assemble</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body log_data" id="msvc_assemble_data"></div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                 </div>
             </div>
-        </td>
-        <td>&rarr;</td>
-        <td class="tab-msvc-border tab-msvc-click"><img src="{{ url_for('static', filename='images/msvc_bake.png') }}"
-                height="
-                114px" width="90%" title="View microservices logs" data-toggle="modal" data-target="#msvc_bake" />
-            <div class="modal" id="msvc_bake">
-                <div class="modal-dialog modal-xl modal-dialog-scrollable">
-                    <div class="modal-content">
-                        <div class="modal-header m-0 p-1">
-                            <h5 class="modal-title">Microservice Bake</h5>
-                            <button type="button" class="close" data-dismiss="modal">&times;</button>
-                        </div>
-                        <div class="modal-body m-0 p-1 text-left log_data" id="msvc_bake_data">
-                        </div>
-                        <div class="modal-footer m-0 p-1">
-                            <button type="button" class="btn btn-sm btn-danger" data-dismiss="modal">Close</button>
-                        </div>
-                    </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="msvc_bake">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Microservice Bake</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body log_data" id="msvc_bake_data"></div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                 </div>
             </div>
-        </td>
-        <td>&rarr;</td>
-        <td class="tab-msvc-border tab-msvc-click"><img
-                src="{{ url_for('static', filename='images/msvc_delivery.png') }}" height="114px" width="90%"
-                title="View microservices logs" data-toggle="modal" data-target="#msvc_delivery" />
-            <div class="modal" id="msvc_delivery">
-                <div class="modal-dialog modal-xl modal-dialog-scrollable">
-                    <div class="modal-content">
-                        <div class="modal-header m-0 p-1">
-                            <h5 class="modal-title">Microservice Delivery</h5>
-                            <button type="button" class="close" data-dismiss="modal">&times;</button>
-                        </div>
-                        <div class="modal-body m-0 p-1 text-left log_data" id="msvc_delivery_data">
-                        </div>
-                        <div class="modal-footer m-0 p-1">
-                            <button type="button" class="btn btn-sm btn-danger" data-dismiss="modal">Close</button>
-                        </div>
-                    </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="msvc_delivery">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Microservice Delivery</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body log_data" id="msvc_delivery_data"></div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                 </div>
             </div>
-        </td>
-        </td>
-    </tr>
-    <tr>
-        <td colspan="2"></td>
-        <td>&#8600;</td>
-        <td>&darr;</td>
-        <td></td>
-        <td>&darr;</td>
-        <td></td>
-        <td>&darr;</td>
-    </tr>
-    <tr>
-        <td>&harr;</td>
-        <td class="tab-msvc-border tab-msvc-click"><img src="{{ url_for('static', filename='images/msvc_status.png') }}"
-                height="57px" width="90%" title="View microservices logs" data-toggle="modal"
-                data-target="#msvc_status" />
-            <div class="modal" id="msvc_status">
-                <div class="modal-dialog modal-xl modal-dialog-scrollable">
-                    <div class="modal-content">
-                        <div class="modal-header m-0 p-1">
-                            <h5 class="modal-title">Microservice Status</h5>
-                            <button type="button" class="close" data-dismiss="modal">&times;</button>
-                        </div>
-                        <div class="modal-body m-0 p-1 text-left log_data" id="msvc_status_data">
-                        </div>
-                        <div class="modal-footer m-0 p-1">
-                            <button type="button" class="btn btn-sm btn-danger" data-dismiss="modal">Close</button>
-                        </div>
-                    </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="msvc_status">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Microservice Status</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-        </td>
-        <td>&larr;</td>
-        <td class="tab-msvc-border" colspan="6"><img src="{{ url_for('static', filename='images/msvc_ksqldb.png') }}"
-                height="57px" />
-        </td>
-    </tr>
-</table>
+                <div class="modal-body log_data" id="msvc_status_data"></div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

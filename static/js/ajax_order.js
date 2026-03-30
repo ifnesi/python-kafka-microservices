@@ -38,17 +38,17 @@ function update_order_status() {
                         }, 2000);
                     }
                     if (data.status == status_delivered) {
-                        toggle_status("badge-info", "badge-success");
+                        toggle_status("bg-info", "bg-success");
                     }
                     else if (last_result != data.status && last_result != -1) {
                         var timeout;
                         for (var i = 0; i < 3; i++) {
                             timeout = i * 500;
                             setTimeout(function () {
-                                toggle_status("badge-info", "badge-warning");
+                                toggle_status("bg-info", "bg-warning");
                             }, timeout);
                             setTimeout(function () {
-                                toggle_status("badge-warning", "badge-info");
+                                toggle_status("bg-warning", "bg-info");
                             }, 250 + timeout);
                         }
                     }
