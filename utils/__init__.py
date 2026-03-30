@@ -17,6 +17,7 @@
 import os
 import re
 import sys
+import json
 import signal
 import socket
 import logging
@@ -28,6 +29,9 @@ from configparser import ConfigParser
 from confluent_kafka import Producer, Consumer
 from logging.handlers import TimedRotatingFileHandler
 from confluent_kafka.admin import AdminClient
+from confluent_kafka.schema_registry import SchemaRegistryClient
+from confluent_kafka.serialization import SerializationContext, MessageField
+from confluent_kafka.schema_registry.avro import AvroSerializer
 
 
 ####################
@@ -35,7 +39,9 @@ from confluent_kafka.admin import AdminClient
 ####################
 FOLDER_PID = "pid"
 FOLDER_LOGS = "logs"
+FOLDER_SCHEMAS = "schemas"
 EXTENSION_LOGS = ".app_log"
+EXTENSION_AVRO = ".avro"
 FOLDER_CONFIG_KAFKA = "config_kafka"
 FOLDER_CONFIG_SYS = "config_sys"
 
@@ -238,6 +244,38 @@ def get_string_status(status_dict: dict, status: int) -> str:
     )
 
 
+def load_avro_schema(schema_name: str) -> str:
+    """Load Avro schema from file"""
+    schema_path = os.path.join(FOLDER_SCHEMAS, f"{schema_name}{EXTENSION_AVRO}")
+    with open(schema_path, "r") as f:
+        return f.read()
+
+
+def get_schema_registry_client(kafka_config_file: str):
+    """Create Schema Registry client"""
+    config_parser = ConfigParser(interpolation=None)
+    config_parser.read_file(open(kafka_config_file, "r"))
+    all_config = {k: dict(v) for k, v in dict(config_parser).items()}
+
+    schema_registry_config = all_config.get("schema-registry")
+    if schema_registry_config:
+        return SchemaRegistryClient(schema_registry_config)
+    return None
+
+
+def create_avro_serializer(schema_registry_client, schema_name: str):
+    """Create Avro serializer for a given schema"""
+    if schema_registry_client is None:
+        return None
+
+    schema_str = load_avro_schema(schema_name)
+    return AvroSerializer(
+        schema_registry_client,
+        schema_str,
+        lambda obj, ctx: obj
+    )
+
+
 def set_producer_consumer(
     kafka_config_file: str,
     producer_extra_config: dict = None,
@@ -318,7 +356,11 @@ def delivery_report(err, msg):
     if err is not None:
         logging.error(f"Delivery failed for key '{msg_key}': {err}")
     else:
-        msg_value = "" if msg.value() is None else msg.value().decode()
+        try:
+            msg_value = "" if msg.value() is None else msg.value().decode()
+        except Exception:
+            # For Avro serialized messages, value might not be decodable
+            msg_value = "<Avro serialized>"
         logging.info(
             f"Event successfully produced\n- Topic: {msg.topic()}, partition #{msg.partition()}, Offset #{msg.offset()}\n- Key: {msg_key}\n- Value: {msg_value}"
         )

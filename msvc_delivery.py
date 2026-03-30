@@ -35,7 +35,10 @@ from utils import (
     log_event_received,
     set_producer_consumer,
     import_state_store_class,
+    get_schema_registry_client,
+    create_avro_serializer,
 )
+from confluent_kafka.serialization import SerializationContext, MessageField
 
 
 ####################
@@ -71,6 +74,17 @@ _, PRODUCER, CONSUMER, _ = set_producer_consumer(
     },
 )
 
+# Set Schema Registry client and Avro serializers
+SCHEMA_REGISTRY_CLIENT = get_schema_registry_client(kafka_config_file)
+AVRO_SERIALIZER_DELIVERED = create_avro_serializer(
+    SCHEMA_REGISTRY_CLIENT,
+    PRODUCE_TOPIC_DELIVERED,
+)
+AVRO_SERIALIZER_PENDING = create_avro_serializer(
+    SCHEMA_REGISTRY_CLIENT,
+    PRODUCE_TOPIC_PENDING,
+)
+
 # Set signal handler
 GRACEFUL_SHUTDOWN = GracefulShutdown(consumer=CONSUMER)
 
@@ -95,29 +109,59 @@ with GRACEFUL_SHUTDOWN as _:
 # General functions #
 #####################
 def pizza_delivered(order_id: str):
+    # Prepare message payload
+    payload = {
+        "status": SYS_CONFIG["status-id"]["delivered"],
+        "timestamp": timestamp_now(),
+    }
+
+    # Produce to kafka topic with Avro serialization
+    if AVRO_SERIALIZER_DELIVERED:
+        # Use Avro serialization
+        value = AVRO_SERIALIZER_DELIVERED(
+            payload,
+            SerializationContext(
+                PRODUCE_TOPIC_DELIVERED,
+                MessageField.VALUE,
+            ),
+        )
+    else:
+        # Fallback to JSON if Schema Registry is not configured
+        value = json.dumps(payload).encode()
+
     PRODUCER.produce(
         PRODUCE_TOPIC_DELIVERED,
         key=order_id,
-        value=json.dumps(
-            {
-                "status": SYS_CONFIG["status-id"]["delivered"],
-                "timestamp": timestamp_now(),
-            }
-        ).encode(),
+        value=value,
     )
     PRODUCER.flush()
 
 
 def pizza_pending(order_id: str):
+    # Prepare message payload
+    payload = {
+        "status": SYS_CONFIG["status-id"]["pending"],
+        "timestamp": timestamp_now(),
+    }
+
+    # Produce to kafka topic with Avro serialization
+    if AVRO_SERIALIZER_PENDING:
+        # Use Avro serialization
+        value = AVRO_SERIALIZER_PENDING(
+            payload,
+            SerializationContext(
+                PRODUCE_TOPIC_PENDING,
+                MessageField.VALUE,
+            ),
+        )
+    else:
+        # Fallback to JSON if Schema Registry is not configured
+        value = json.dumps(payload).encode()
+
     PRODUCER.produce(
         PRODUCE_TOPIC_PENDING,
         key=order_id,
-        value=json.dumps(
-            {
-                "status": SYS_CONFIG["status-id"]["pending"],
-                "timestamp": timestamp_now(),
-            }
-        ).encode(),
+        value=value,
     )
     PRODUCER.flush()
 

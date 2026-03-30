@@ -35,7 +35,10 @@ from utils import (
     validate_cli_args,
     log_event_received,
     set_producer_consumer,
+    get_schema_registry_client,
+    create_avro_serializer,
 )
+from confluent_kafka.serialization import SerializationContext, MessageField
 
 
 ####################
@@ -70,6 +73,13 @@ _, PRODUCER, CONSUMER, _ = set_producer_consumer(
     },
 )
 
+# Set Schema Registry client and Avro serializer
+SCHEMA_REGISTRY_CLIENT = get_schema_registry_client(kafka_config_file)
+AVRO_SERIALIZER = create_avro_serializer(
+    SCHEMA_REGISTRY_CLIENT,
+    PRODUCE_TOPIC_ASSEMBLED,
+)
+
 # Set signal handler
 GRACEFUL_SHUTDOWN = GracefulShutdown(consumer=CONSUMER)
 
@@ -81,17 +91,31 @@ def pizza_assembled(
     order_id: str,
     baking_time: int,
 ):
-    # Produce to kafka topic
+    # Prepare message payload
+    payload = {
+        "status": SYS_CONFIG["status-id"]["pizza_assembled"],
+        "baking_time": baking_time,
+        "timestamp": timestamp_now(),
+    }
+
+    # Produce to kafka topic with Avro serialization
+    if AVRO_SERIALIZER:
+        # Use Avro serialization
+        value = AVRO_SERIALIZER(
+            payload,
+            SerializationContext(
+                PRODUCE_TOPIC_ASSEMBLED,
+                MessageField.VALUE,
+            ),
+        )
+    else:
+        # Fallback to JSON if Schema Registry is not configured
+        value = json.dumps(payload).encode()
+
     PRODUCER.produce(
         PRODUCE_TOPIC_ASSEMBLED,
         key=order_id,
-        value=json.dumps(
-            {
-                "status": SYS_CONFIG["status-id"]["pizza_assembled"],
-                "baking_time": baking_time,
-                "timestamp": timestamp_now(),
-            }
-        ).encode(),
+        value=value,
     )
     PRODUCER.flush()
 
