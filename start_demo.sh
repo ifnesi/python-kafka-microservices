@@ -29,7 +29,7 @@ then
     echo
     exit 1
 else
-    source _venv/bin/activate
+    source .venv/bin/activate
 
     ./stop_demo.sh
 

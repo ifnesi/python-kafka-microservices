@@ -30,6 +30,7 @@ from utils import (
     log_exception,
     timestamp_now,
     delivery_report,
+    delivery_report_avro,
     get_script_name,
     get_system_config,
     validate_cli_args,
@@ -37,6 +38,7 @@ from utils import (
     set_producer_consumer,
     get_schema_registry_client,
     create_avro_serializer,
+    create_avro_deserializer,
 )
 from confluent_kafka.serialization import SerializationContext, MessageField
 
@@ -56,7 +58,7 @@ kafka_config_file, sys_config_file = validate_cli_args(SCRIPT)
 SYS_CONFIG = get_system_config(sys_config_file)
 
 # Set producer/consumer objects
-PRODUCE_TOPIC_STATUS = SYS_CONFIG["kafka-topics"]["pizza_status"]
+delivery_report_avro(kafka_config_file)
 PRODUCE_TOPIC_ASSEMBLED = SYS_CONFIG["kafka-topics"]["pizza_assembled"]
 CONSUME_TOPICS = [
     SYS_CONFIG["kafka-topics"]["pizza_ordered"],
@@ -79,6 +81,7 @@ AVRO_SERIALIZER = create_avro_serializer(
     SCHEMA_REGISTRY_CLIENT,
     PRODUCE_TOPIC_ASSEMBLED,
 )
+AVRO_DESERIALISER = create_avro_deserializer(SCHEMA_REGISTRY_CLIENT)
 
 # Set signal handler
 GRACEFUL_SHUTDOWN = GracefulShutdown(consumer=CONSUMER)
@@ -134,12 +137,17 @@ def receive_orders():
                         # Add a little delay just to allow the logs on the previous micro-service to be displayed first
                         time.sleep(0.15)
 
-                        log_event_received(event)
-
                         order_id = event.key().decode()
                         try:
-                            order_details = json.loads(event.value().decode())
+                            order_details = AVRO_DESERIALISER(
+                                event.value(),
+                                SerializationContext(
+                                    event.topic(),
+                                    MessageField.VALUE,
+                                ),
+                            )
                             order = order_details.get("order", dict())
+                            log_event_received(event.topic(), event.key(), order_details)
                         except Exception:
                             log_exception(
                                 f"Error when processing event.value() {event.value()}",

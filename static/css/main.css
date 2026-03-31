@@ -174,7 +174,7 @@ svg {
 
 a:hover svg,
 button:hover svg {
-    transform: scale(1.1);
+    transform: scale(1.05);
 }
 
 .btn svg {
@@ -272,7 +272,7 @@ button:hover svg {
 .flow-table {
     border-collapse: collapse;
     margin: 0 auto;
-    border: 0;
+    border-width: 0;
     width: calc(100% - 30px);
 }
 
@@ -292,14 +292,15 @@ button:hover svg {
     text-align: center;
     vertical-align: middle;
     padding: 5px;
-    border: 0;
+    border-width: 0;
 }
 
 /* Service Cells */
 .service-cell {
     width: 140px;
-    border: 2px solid #dee2e6 !important;
-    border-radius: 8px;
+    border-width: 2px !important;
+    border-style: solid;
+    border-color: #dee2e6;
 }
 
 .cache-cell {
@@ -343,10 +344,6 @@ button:hover svg {
     height: 100%;
 }
 
-.service-card-small {
-    height: 90px;
-}
-
 .service-card-wide {
     width: 100%;
     max-width: 700px;
@@ -367,13 +364,13 @@ button:hover svg {
     cursor: pointer;
 }
 
-.service-clickable:hover .service-card {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+.service-card.service-clickable:hover {
+    transform: translateY(-8px) scale(1.05);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
 }
 
-.service-clickable:hover .service-icon {
-    transform: scale(1.1);
+.service-card.service-clickable:hover img {
+    transform: scale(1.05);
 }
 
 /* Service Icons */
@@ -414,10 +411,6 @@ button:hover svg {
         padding: 8px;
     }
 
-    .service-card-small {
-        height: 70px;
-    }
-
     .service-card-wide {
         max-width: 500px;
     }
@@ -427,7 +420,7 @@ button:hover svg {
         height: 50px !important;
     }
 
-    .service-card-small .service-icon,
+    .service-icon,
     .service-card-wide .service-icon {
         width: 35px !important;
         height: 35px !important;

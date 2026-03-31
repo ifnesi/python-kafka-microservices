@@ -155,12 +155,96 @@ You can setup your own environment to do the tests, or go straight to the <a hre
  - You will only be able to see your own orders, you cannot see someone else's
 
 ### Installation and Configuration
+
+You have three options to run this demo:
+
+#### Option 1: 🐳 Docker (Easiest - Recommended)
+
+Run all microservices in Docker containers with a single command:
+
+1. **Prerequisites**:
+   - Docker and Docker Compose installed
+   - Confluent Cloud resources (via Terraform or manual)
+   - Configuration file at `config_kafka/cc_demo.ini`
+
+2. **Start All Services**:
+   ```bash
+   # Clone this repo
+   git clone git@github.com:ifnesi/python-kafka-microservices.git
+   cd python-kafka-microservices
+
+   # Start all containers
+   ./docker-scripts/start.sh
+
+   # Open browser to http://localhost:8000
+   ```
+
+3. **View Logs**:
+   ```bash
+   ./docker-scripts/logs.sh            # All services
+   ./docker-scripts/logs.sh webapp     # Specific service
+   ```
+
+4. **Stop All Services**:
+   ```bash
+   ./docker-scripts/stop.sh
+   ```
+
+See [DOCKER.md](DOCKER.md) for detailed Docker documentation.
+
+#### Option 2: ☁️ Terraform + Local Python (Recommended for Confluent Cloud)
+
+Deploy Confluent Cloud infrastructure with Terraform, run Python microservices locally:
+
+1. **Prerequisites**:
+   - Confluent Cloud account with OrganizationAdmin API credentials
+   - Terraform >= 0.14.0 installed
+   - SQLite3 and Python +3.8
+
+2. **Deploy Confluent Cloud Resources**:
+   ```bash
+   # Clone this repo
+   git clone git@github.com:ifnesi/python-kafka-microservices.git
+   cd python-kafka-microservices
+
+   # Set Confluent Cloud credentials
+   export CONFLUENT_CLOUD_API_KEY="your-api-key"
+   export CONFLUENT_CLOUD_API_SECRET="your-api-secret"
+
+   # Deploy infrastructure (Environment, Kafka, Schema Registry, Flink, Topics, Schemas)
+   cd terraform
+   ./scripts/setup.sh
+   terraform plan
+   terraform apply
+
+   # The configuration file will be automatically generated at:
+   # config_kafka/cc_demo.ini
+   ```
+
+3. **Setup Python Environment**:
+   ```bash
+   cd ..
+   python3 -m venv .venv
+   source .venv/bin/activate
+   python3 -m pip install -r requirements.txt
+   ```
+
+4. **Start the Demo**:
+   ```bash
+   ./start_demo.sh cc_demo default.ini
+   # Open browser to http://127.0.0.1:8000
+   ```
+
+See [terraform/README.md](terraform/README.md) for detailed Terraform documentation.
+
+#### Option 3: 🔧 Manual Setup
+
 - SQLite3 and Python +3.8 required
 - Install python virtual environment: ```python3 -m pip install venv``` or ```python3 -m pip install virtualenv```
 - Clone this repo: ```git clone git@github.com:ifnesi/python-kafka-microservices.git```
 - Go to the folder where the repo was cloned: ```cd python-kafka-microservices```
-- Create a virtual environment: ```python3 -m venv _venv```
-- Activate the virtual environment: ```source _venv/bin/activate```
+- Create a virtual environment: ```python3 -m venv .venv```
+- Activate the virtual environment: ```source .venv/bin/activate```
 - Install project requirements: ```python3 -m pip install -r requirements.txt```
 - Run script to create topics*/ksqlDB streams: ```python3 run_me_first.py {KAFKA_CONFIG_FILE} {SYS_CONFIG_FILE}```
 - Deactivate the virtual environment: ```deactivate```
@@ -186,7 +270,7 @@ pizza_status = pizza-status
 ```
 
 ### Running the webapp and microservices
-- Activate the virtual environment: ```source _venv/bin/activate```
+- Activate the virtual environment: ```source .venv/bin/activate```
 - Start the demo (all in a single terminal): ```./start_demo.sh {KAFKA_CONFIG_FILE} {SYS_CONFIG_FILE}```
 - Alternativelly, so you can see the logs of each process, open five shell terminals and start each service on them:
   - Terminal #1: ```python3 msvc_status.py {KAFKA_CONFIG_FILE} {SYS_CONFIG_FILE}```

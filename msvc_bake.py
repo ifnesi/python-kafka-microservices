@@ -29,6 +29,7 @@ from utils import (
     log_exception,
     timestamp_now,
     delivery_report,
+    delivery_report_avro,
     get_script_name,
     get_system_config,
     validate_cli_args,
@@ -36,6 +37,7 @@ from utils import (
     set_producer_consumer,
     get_schema_registry_client,
     create_avro_serializer,
+    create_avro_deserializer,
 )
 from confluent_kafka.serialization import SerializationContext, MessageField
 
@@ -54,8 +56,8 @@ kafka_config_file, sys_config_file = validate_cli_args(SCRIPT)
 SYS_CONFIG = get_system_config(sys_config_file)
 
 # Set producer/consumer objects
+delivery_report_avro(kafka_config_file)
 PRODUCE_TOPIC_BAKED = SYS_CONFIG["kafka-topics"]["pizza_baked"]
-PRODUCE_TOPIC_STATUS = SYS_CONFIG["kafka-topics"]["pizza_status"]
 CONSUME_TOPICS = [
     SYS_CONFIG["kafka-topics"]["pizza_assembled"],
 ]
@@ -77,6 +79,7 @@ AVRO_SERIALIZER = create_avro_serializer(
     SCHEMA_REGISTRY_CLIENT,
     PRODUCE_TOPIC_BAKED,
 )
+AVRO_DESERIALISER = create_avro_deserializer(SCHEMA_REGISTRY_CLIENT)
 
 # Set signal handler
 GRACEFUL_SHUTDOWN = GracefulShutdown(consumer=CONSUMER)
@@ -128,12 +131,19 @@ def receive_pizza_assembled():
                         # Add a little delay just to allow the logs on the previous micro-service to be displayed first
                         time.sleep(0.15)
 
-                        log_event_received(event)
-
                         order_id = event.key().decode()
+                        order_details = AVRO_DESERIALISER(
+                            event.value(),
+                            SerializationContext(
+                                event.topic(),
+                                MessageField.VALUE,
+                            ),
+                        )
+                        log_event_received(event.topic(), event.key(), order_details)
                         try:
-                            baking_time = json.loads(event.value().decode()).get(
-                                "baking_time", 0
+                            baking_time = order_details.get(
+                                "baking_time",
+                                0,
                             )
                         except Exception:
                             log_exception(

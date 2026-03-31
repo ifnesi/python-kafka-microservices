@@ -29,6 +29,7 @@ from utils import (
     log_exception,
     timestamp_now,
     delivery_report,
+    delivery_report_avro,
     get_script_name,
     get_system_config,
     validate_cli_args,
@@ -37,6 +38,7 @@ from utils import (
     import_state_store_class,
     get_schema_registry_client,
     create_avro_serializer,
+    create_avro_deserializer,
 )
 from confluent_kafka.serialization import SerializationContext, MessageField
 
@@ -55,10 +57,10 @@ kafka_config_file, sys_config_file = validate_cli_args(SCRIPT)
 SYS_CONFIG = get_system_config(sys_config_file)
 
 # Set producer/consumer objects
+delivery_report_avro(kafka_config_file)
 PENDING_ORDER = "PENDING"
 PRODUCE_TOPIC_DELIVERED = SYS_CONFIG["kafka-topics"]["pizza_delivered"]
 PRODUCE_TOPIC_PENDING = SYS_CONFIG["kafka-topics"]["pizza_pending"]
-PRODUCE_TOPIC_STATUS = SYS_CONFIG["kafka-topics"]["pizza_status"]
 TOPIC_PIZZA_ORDERED = SYS_CONFIG["kafka-topics"]["pizza_ordered"]
 TOPIC_PIZZA_BAKED = SYS_CONFIG["kafka-topics"]["pizza_baked"]
 CONSUME_TOPICS = [TOPIC_PIZZA_ORDERED, TOPIC_PIZZA_BAKED]
@@ -84,6 +86,7 @@ AVRO_SERIALIZER_PENDING = create_avro_serializer(
     SCHEMA_REGISTRY_CLIENT,
     PRODUCE_TOPIC_PENDING,
 )
+AVRO_DESERIALISER = create_avro_deserializer(SCHEMA_REGISTRY_CLIENT)
 
 # Set signal handler
 GRACEFUL_SHUTDOWN = GracefulShutdown(consumer=CONSUMER)
@@ -195,17 +198,22 @@ def receive_pizza_baked():
                         # Add a little delay just to allow the logs on the previous micro-service to be displayed first
                         time.sleep(0.2)
 
-                        log_event_received(event)
-
                         order_id = event.key().decode()
                         topic = event.topic()
 
                         if topic == TOPIC_PIZZA_ORDERED:
                             # Early warning that a pizza must be delivered once ready (usually it should arrive before the pizza is baked)
                             try:
-                                order_details = json.loads(event.value().decode())
+                                order_details = AVRO_DESERIALISER(
+                                    event.value(),
+                                    SerializationContext(
+                                        event.topic(),
+                                        MessageField.VALUE,
+                                    ),
+                                )
                                 order = order_details.get("order", dict())
                                 customer_id = order.get("customer_id", "0000")
+                                log_event_received(event.topic(), event.key(), order_details)
 
                                 # Check if it is a pending order, that happens when the early notification (for some reason) arrives after the notification the pizza is baked
                                 is_pending = False

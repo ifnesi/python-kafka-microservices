@@ -17,7 +17,6 @@
 import os
 import re
 import sys
-import json
 import signal
 import socket
 import logging
@@ -29,9 +28,9 @@ from configparser import ConfigParser
 from confluent_kafka import Producer, Consumer
 from logging.handlers import TimedRotatingFileHandler
 from confluent_kafka.admin import AdminClient
-from confluent_kafka.schema_registry import SchemaRegistryClient
 from confluent_kafka.serialization import SerializationContext, MessageField
-from confluent_kafka.schema_registry.avro import AvroSerializer
+from confluent_kafka.schema_registry import SchemaRegistryClient
+from confluent_kafka.schema_registry.avro import AvroSerializer, AvroDeserializer
 
 
 ####################
@@ -44,6 +43,8 @@ EXTENSION_LOGS = ".app_log"
 EXTENSION_AVRO = ".avro"
 FOLDER_CONFIG_KAFKA = "config_kafka"
 FOLDER_CONFIG_SYS = "config_sys"
+SCHEMA_REGISTRY_CLIENT = None
+AVRO_DESERIALISER = None
 
 
 #####################
@@ -155,17 +156,16 @@ def log_ini(
     )
 
 
-def log_event_received(event) -> None:
+def log_event_received(
+    topic: str,
+    key: bytes,
+    value: dict,
+) -> None:
     event_data = [
-        event.topic(),
-        event.key(),
-        event.value(),
+        topic,
+        key.decode() if isinstance(key, bytes) else key,
+        value,
     ]
-    for n in range(len(event_data)):
-        try:
-            event_data[n] = event_data[n].decode()
-        except Exception:
-            pass
     logging.info(
         f"""Event received\n- Topic: {event_data[0]}\n- Key: {event_data[1]}\n- Value: {event_data[2]}"""
     )
@@ -269,10 +269,16 @@ def create_avro_serializer(schema_registry_client, schema_name: str):
         return None
 
     schema_str = load_avro_schema(schema_name)
-    return AvroSerializer(
+    return AvroSerializer(schema_registry_client, schema_str, lambda obj, ctx: obj)
+
+
+def create_avro_deserializer(schema_registry_client):
+    """Create Avro deserializer for a given schema"""
+    if schema_registry_client is None:
+        return None
+
+    return AvroDeserializer(
         schema_registry_client,
-        schema_str,
-        lambda obj, ctx: obj
     )
 
 
@@ -313,8 +319,9 @@ def set_producer_consumer(
     if not disable_consumer:
         consumer_common_config = {
             "enable.auto.commit": False,
-            "auto.offset.reset": "earliest",
+            "auto.offset.reset": "latest",
             "max.poll.interval.ms": 3000000,
+            "isolation.level": "read_uncommitted",
         }
         consumer = Consumer(
             {
@@ -350,17 +357,28 @@ def get_topic_partitions(
     return partitions
 
 
+def delivery_report_avro(kafka_config_file: str):
+    global SCHEMA_REGISTRY_CLIENT, AVRO_DESERIALISER
+    if SCHEMA_REGISTRY_CLIENT is None:
+        SCHEMA_REGISTRY_CLIENT = get_schema_registry_client(kafka_config_file)
+    if AVRO_DESERIALISER is None:
+        AVRO_DESERIALISER = create_avro_deserializer(SCHEMA_REGISTRY_CLIENT)
+
+
 def delivery_report(err, msg):
     """Reports the failure or success of an event delivery"""
+    global AVRO_DESERIALISER
     msg_key = "" if msg.key() is None else msg.key().decode()
     if err is not None:
         logging.error(f"Delivery failed for key '{msg_key}': {err}")
     else:
-        try:
-            msg_value = "" if msg.value() is None else msg.value().decode()
-        except Exception:
-            # For Avro serialized messages, value might not be decodable
-            msg_value = "<Avro serialized>"
+        msg_value = AVRO_DESERIALISER(
+            msg.value(),
+            SerializationContext(
+                msg.topic(),
+                MessageField.VALUE,
+            ),
+        )
         logging.info(
             f"Event successfully produced\n- Topic: {msg.topic()}, partition #{msg.partition()}, Offset #{msg.offset()}\n- Key: {msg_key}\n- Value: {msg_value}"
         )
@@ -437,9 +455,9 @@ def ksqldb(
             payload={
                 "ksql": statement,
                 "streamsProperties": {
-                    "ksql.streams.auto.offset.reset": "earliest"
-                    if offset_reset_earliest
-                    else "latest",
+                    "ksql.streams.auto.offset.reset": (
+                        "earliest" if offset_reset_earliest else "latest"
+                    ),
                     "ksql.streams.cache.max.bytes.buffering": "0",
                 },
             },

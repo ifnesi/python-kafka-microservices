@@ -13,12 +13,45 @@ $(document).ready(function () {
     get_logs();
     setTimeout(function () {
         update_order_status();
-    }, 1000);
+    }, 5);
 });
 
 function toggle_status(remove, add) {
     $("#order_status").removeClass(remove);
     $("#order_status").addClass(add);
+}
+
+function update_service_borders(status) {
+    // Color constants
+    const colors = {
+        grey: '#dee2e6',
+        green: '#198754',
+        red: '#dc3545',
+        blue: '#0d6efd'
+    };
+
+    $("#webapp-cell").css('border-color', colors.green);
+    $("#assembly-cell, #bake-cell, #delivery-cell, #status-cell").css('border-color', colors.grey);
+    if (status == 100) {
+        $("#webapp-cell").css('border-color', colors.grey);
+        $("#assembly-cell").css('border-color', colors.green);
+    }
+    else if (status == 200) {
+        $("#assembly-cell").css('border-color', colors.grey);
+        $("#bake-cell").css('border-color', colors.green);
+    }
+    else if (status == 300) {
+        $("#webapp-cell").css('border-color', colors.grey);
+        $("#delivery-cell").css('border-color', colors.green);
+    }
+    else if ([50, 150, 410, 430, 499].includes(status)) {
+        $("#webapp-cell").css('border-color', colors.grey);
+        $("#status-cell").css('border-color', colors.red);
+    }
+    else if (status == 999) {
+        $("#webapp-cell").css('border-color', colors.grey);
+        $("#status-cell").css('border-color', colors.blue);
+    }
 }
 
 // Update view order every 2 secs (in a realistic scenario that would be better off using REACT)
@@ -35,7 +68,7 @@ function update_order_status() {
                         $("#order_status").text(data.str);
                         setTimeout(function () {
                             update_order_status();
-                        }, 2000);
+                        }, 500);
                     }
                     if (data.status == status_delivered) {
                         toggle_status("bg-info", "bg-success");
@@ -53,6 +86,8 @@ function update_order_status() {
                         }
                     }
                     last_result = data.status;
+                    // Update service borders based on status
+                    update_service_borders(data.status);
                 }
             }
         });

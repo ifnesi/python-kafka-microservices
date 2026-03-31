@@ -42,12 +42,16 @@ from utils import (
     get_hostname,
     get_script_name,
     delivery_report,
+    delivery_report_avro,
     timestamp_now,
     validate_cli_args,
     get_system_config,
     set_producer_consumer,
     import_state_store_class,
+    get_schema_registry_client,
+    create_avro_serializer,
 )
+from confluent_kafka.serialization import SerializationContext, MessageField
 
 
 ####################
@@ -65,6 +69,7 @@ kafka_config_file, sys_config_file = validate_cli_args(SCRIPT)
 SYS_CONFIG = get_system_config(sys_config_file)
 
 # Set producer object
+delivery_report_avro(kafka_config_file)
 PRODUCE_TOPIC_ORDERED = SYS_CONFIG["kafka-topics"]["pizza_ordered"]
 _, PRODUCER, _, _ = set_producer_consumer(
     kafka_config_file,
@@ -73,6 +78,13 @@ _, PRODUCER, _, _ = set_producer_consumer(
         "client.id": f"""{SYS_CONFIG["kafka-client-id"]["webapp"]}_{HOSTNAME}""",
     },
     disable_consumer=True,
+)
+
+# Set Schema Registry client and Avro serializer
+SCHEMA_REGISTRY_CLIENT = get_schema_registry_client(kafka_config_file)
+AVRO_SERIALIZER = create_avro_serializer(
+    SCHEMA_REGISTRY_CLIENT,
+    PRODUCE_TOPIC_ORDERED,
 )
 
 # Set signal handler
@@ -222,11 +234,24 @@ def order_pizza():
                 SYS_CONFIG["status-id"]["order_placed"],
             )
 
-        # Produce to kafka topic
+        # Produce to kafka topic with Avro serialization
+        if AVRO_SERIALIZER:
+            # Use Avro serialization
+            value = AVRO_SERIALIZER(
+                order_details,
+                SerializationContext(
+                    PRODUCE_TOPIC_ORDERED,
+                    MessageField.VALUE,
+                ),
+            )
+        else:
+            # Fallback to JSON if Schema Registry is not configured
+            value = json.dumps(order_details).encode()
+
         PRODUCER.produce(
             PRODUCE_TOPIC_ORDERED,
             key=order_id,
-            value=json.dumps(order_details).encode(),
+            value=value,
         )
         PRODUCER.flush()
 
@@ -310,7 +335,7 @@ def get_order(order_id: str):
                     timestamp=datetime.datetime.fromtimestamp(
                         order_details["timestamp"] / 1000
                     ).strftime("%Y-%b-%d %H:%M:%S"),
-                    status=order_details["status"],
+                    status=int(order_details["status"]),
                     status_str=order_details["status_str"],
                     status_delivered=SYS_CONFIG["status-id"]["delivered"],
                     username=order_details["username"],

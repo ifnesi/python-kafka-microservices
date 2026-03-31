@@ -17,7 +17,6 @@
 # Microservice to set order status
 
 import sys
-import json
 import time
 import logging
 
@@ -37,7 +36,10 @@ from utils import (
     get_system_config,
     set_producer_consumer,
     import_state_store_class,
+    get_schema_registry_client,
+    create_avro_deserializer,
 )
+from confluent_kafka.serialization import SerializationContext, MessageField
 
 
 ####################
@@ -65,6 +67,10 @@ _, _, CONSUMER, _ = set_producer_consumer(
         "client.id": f"""{SYS_CONFIG["kafka-client-id"]["microservice_status"]}_{HOSTNAME}""",
     },
 )
+
+# Set Schema Registry client and Avro serializers
+SCHEMA_REGISTRY_CLIENT = get_schema_registry_client(kafka_config_file)
+AVRO_DESERIALISER = create_avro_deserializer(SCHEMA_REGISTRY_CLIENT)
 
 # Set signal handler
 GRACEFUL_SHUTDOWN = GracefulShutdown(consumer=CONSUMER)
@@ -124,7 +130,6 @@ def get_pizza_status():
                     logging.error(event.error())
                 else:
                     try:
-                        log_event_received(event)
 
                         order_id = event.key().decode()
                         with DB(
@@ -136,12 +141,18 @@ def get_pizza_status():
                             )
                             if order_data is not None:
                                 try:
-                                    pizza_status = json.loads(
-                                        event.value().decode()
-                                    ).get(
-                                        "STATUS",
+                                    order_details = AVRO_DESERIALISER(
+                                        event.value(),
+                                        SerializationContext(
+                                            event.topic(),
+                                            MessageField.VALUE,
+                                        ),
+                                    )
+                                    pizza_status = order_details.get(
+                                        "status",
                                         SYS_CONFIG["status-id"]["unknown"],
                                     )
+                                    log_event_received(event.topic(), event.key(), order_details)
                                 except Exception:
                                     pizza_status = SYS_CONFIG["status-id"][
                                         "something_wrong"
