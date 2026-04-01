@@ -1,0 +1,18 @@
+{
+  "type": "record",
+  "name": "PizzaDemoDelivered",
+  "namespace": "com.confluent.pizza",
+  "doc": "Schema for pizza delivered events",
+  "fields": [
+    {
+      "name": "status",
+      "type": "int",
+      "doc": "Status code for the pizza delivery completion"
+    },
+    {
+      "name": "timestamp",
+      "type": "long",
+      "doc": "Event timestamp in milliseconds since epoch"
+    }
+  ]
+}

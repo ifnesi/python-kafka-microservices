@@ -8,22 +8,21 @@ services:
       - sh
       - -c
       - |
-        python3 msvc_status.py cc_demo.ini default.ini &
-        python3 msvc_assemble.py cc_demo.ini default.ini &
-        python3 msvc_bake.py cc_demo.ini default.ini &
-        python3 msvc_delivery.py cc_demo.ini default.ini &
-        exec gunicorn 'webapp:main("cc_demo.ini", "default.ini")' --bind 0.0.0.0:8000 --workers 2 --timeout 120
+        python3 msvc_status.py confluent_cloud.ini webapp.ini &
+        python3 msvc_assemble.py confluent_cloud.ini webapp.ini &
+        python3 msvc_bake.py confluent_cloud.ini webapp.ini &
+        python3 msvc_delivery.py confluent_cloud.ini webapp.ini &
+        exec gunicorn 'webapp:main("confluent_cloud.ini", "webapp.ini")' --bind 0.0.0.0:8000 --workers 2 --timeout 120
     ports:
       - "8000:8000"
     volumes:
-      - ./logs:/app/logs
-      - ./pid:/app/pid
-      - ./utils:/app/utils:ro
-      - ./config_kafka:/app/config_kafka:ro
-      - ./config_sys:/app/config_sys:ro
-      - ./schemas:/app/schemas:ro
-      - ./static:/app/static:ro
-      - ./templates:/app/templates:ro
+      - ./app/logs:/app/logs
+      - ./app/pid:/app/pid
+      - ./app/utils:/app/utils:ro
+      - ./app/config:/app/config:ro
+      - ./app/schemas:/app/schemas:ro
+      - ./app/static:/app/static:ro
+      - ./app/templates:/app/templates:ro
     environment:
       - PYTHONUNBUFFERED=1
     restart: unless-stopped

@@ -1,6 +1,6 @@
 .venv
-pid/*
-logs/*
+app/pid/*
+app/logs/*
 __pycache__
 
 *.pyc
@@ -9,12 +9,9 @@ __pycache__
 
 .env
 
-config_kafka/*
+app/config/*
+!app/config/webapp.ini
 
-config_sys/*
-!config_sys/default.ini
-
-test*.py
 demo-pizza.txt
 
 # Local .terraform directories

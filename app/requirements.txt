@@ -1,0 +1,10 @@
+confluent_kafka
+httpx
+authlib
+cachetools
+attrs
+fastavro
+requests
+flask
+flask-login
+gunicorn

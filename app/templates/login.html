@@ -1,0 +1,32 @@
+{% extends 'header.html' %}
+
+{% block content %}
+<div class="row justify-content-center align-items-center" style="min-height: 70vh;">
+    <div class="col-sm-12 col-md-6 col-lg-6">
+        <div class="card shadow-lg border-0">
+            <div class="card-body p-4">
+                <div class="text-center mb-4">
+                    <div class="mb-3">
+                        <img src="{{ url_for('static', filename='images/logo.png') }}" width="75" class="map img-fluid" />
+                    </div>
+                    <h3 class="fw-bold">Welcome to Confluent Pizza</h3>
+                    <p class="text-muted">Sign in to order your pizza</p>
+                </div>
+                <form action="/login" method="POST" class="needs-validation" novalidate>
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Username</label>
+                        <input type="text" class="form-control form-control-lg" id="username" name="username"
+                               maxlength="16" required autocomplete="off" placeholder="Enter your username">
+                        <div class="invalid-feedback">
+                            Please enter a username.
+                        </div>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg">Login</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

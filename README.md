@@ -1,4 +1,4 @@
-# <img src="static/images/logo.png" width="32" /> python-kafka-microservices <img src="static/images/logo.png" width="32" />
+# <img src="app/static/images/logo.png" width="32" /> python-kafka-microservices <img src="app/static/images/logo.png" width="32" />
 This is an example of a microservice ecosystem using the CQRS (Command and Query Responsibility Segregation) and Event Sourcing patterns, and nothing better to explain that by using as reference a pizza takeaway shop. Who doesn't love a pizza? :blush:
 
 ## CQRS in a nutshell
@@ -40,7 +40,7 @@ This pizza takeaway shop ecosystem was designed using Python and made simple for
   - Process status (```msvc_status.py```): Whenever one of the previous microservices complete their task they will communicate with this microservice so it can update the web application. This microservice will be the Query portion of the CQRS pattern. It will have the materialised views stored in the aforementioned SQLite3 state store*
 - All interprocess communication is via an Apache Kafka cluster
 
-(*) By default SQLite3 will be used, but that can be changed via system configuration file (default is ```'config_sys/default.ini'```) by setting a different python class (the base/abstract class is defined on utils.db, class name is ```BaseStateStore```), see below the default system configuration:
+(*) By default SQLite3 will be used, but that can be changed via system configuration file (default is ```'config/webapp.ini'```) by setting a different python class (the base/abstract class is defined on utils.db, class name is ```BaseStateStore```), see below the default system configuration:
 ```
 [state-store-orders]
 db_module_class = utils.db.sqlite
@@ -52,14 +52,14 @@ db_module_class = utils.db.sqlite
 IMPORTANT: In ordert to keep consistency with Java based clients (using murmur2 partitioner), the producers will also set the topic partition using the murmur2 hash function, other than the standard CRC32 on librdkafka.
 
 Webapp and four microservices in action:
-![image](static/images/docs/service_flow.png)
+![image](app/static/images/docs/service_flow.png)
 
 ### Low level view
 Detailed view of all microservices and to what Kafka topics their produce and are subscribed to:
-![image](static/images/docs/gen_architecture.png)
+![image](app/static/images/docs/gen_architecture.png)
 
 Confluent Cloud Stream Lineage view:
-![image](static/images/docs/cc-stream-lineage.png)
+![image](app/static/images/docs/cc-stream-lineage.png)
 
 ### ksqlDB queries
 #### Collections
@@ -165,7 +165,7 @@ Run all microservices in Docker containers with a single command:
 1. **Prerequisites**:
    - Docker and Docker Compose installed
    - Confluent Cloud resources (via Terraform or manual)
-   - Configuration file at `config_kafka/cc_demo.ini`
+   - Configuration file at `config/confluent_cloud.ini`
 
 2. **Start All Services**:
    ```bash
@@ -218,7 +218,7 @@ Deploy Confluent Cloud infrastructure with Terraform, run Python microservices l
    terraform apply
 
    # The configuration file will be automatically generated at:
-   # config_kafka/cc_demo.ini
+   # config/confluent_cloud.ini
    ```
 
 3. **Setup Python Environment**:
@@ -231,7 +231,7 @@ Deploy Confluent Cloud infrastructure with Terraform, run Python microservices l
 
 4. **Start the Demo**:
    ```bash
-   ./start_demo.sh cc_demo default.ini
+   ./start_demo.sh cc_demo webapp.ini
    # Open browser to http://127.0.0.1:8000
    ```
 
@@ -248,8 +248,8 @@ See [terraform/README.md](terraform/README.md) for detailed Terraform documentat
 - Install project requirements: ```python3 -m pip install -r requirements.txt```
 - Run script to create topics*/ksqlDB streams: ```python3 run_me_first.py {KAFKA_CONFIG_FILE} {SYS_CONFIG_FILE}```
 - Deactivate the virtual environment: ```deactivate```
-  - ```{SYS_CONFIG_FILE}``` is a system configuration file, this file must be located under the folder ```config_sys/``` (default file is ```default.ini```)
-  - ```{KAFKA_CONFIG_FILE}``` is a Kafka configuration file containing the properties to access the Apache Kafka cluster, this file must be located under the folder ```config_kafka/``` (see file ```config_kafka/example.ini``` for reference):
+  - ```{SYS_CONFIG_FILE}``` is a system configuration file, this file must be located under the folder ```config/``` (default file is ```webapp.ini```)
+  - ```{KAFKA_CONFIG_FILE}``` is a Kafka configuration file containing the properties to access the Apache Kafka cluster, this file must be located under the folder ```config/``` (see file ```config/example.ini``` for reference):
 ```
     [kafka]
     bootstrap.servers = {{ host:port }}
@@ -258,7 +258,7 @@ See [terraform/README.md](terraform/README.md) for detailed Terraform documentat
     sasl.username = {{ CLUSTER_API_KEY }}
     sasl.password = {{ CLUSTER_API_SECRET }}
 ```
-(*) Topics can be changed via system configuration file (default is ```'config_sys/default.ini'```):
+(*) Topics can be changed via system configuration file (default is ```'config/webapp.ini'```):
 ```
 [kafka-topics]
 pizza_pending = pizza-pending
@@ -297,7 +297,7 @@ Should you want to try it out on your own and run it all locally, you will need 
 
 ### Using the webapp and of chronology of events
 1. After starting all scripts and accessing the landing page (http://127.0.0.1:8000), customise your pizza and submit your order:
-![image](static/images/docs/webapp_menu.png)
+![image](app/static/images/docs/webapp_menu.png)
 
 2. Once the order is submitted the webapp will produce an event to the Kafka topic ```pizza-ordered```:
 ```
@@ -308,7 +308,7 @@ Should you want to try it out on your own and run it all locally, you will need 
  ```
 
 3. The webapp will display the confirmation of the order:
-![image](static/images/docs/webapp_order_confirmation.png)
+![image](app/static/images/docs/webapp_order_confirmation.png)
 
 4. The microservice **Deliver Pizza** (step 1/2) receives early warning about a new order by subscribing to topic ```pizza-ordered```. In a real life scenario it would get the ```customer_id``` data and query its data store (e.g., ksqlDB/Flink) and fetch the delivery address:
 ```
@@ -376,7 +376,7 @@ Should you want to try it out on your own and run it all locally, you will need 
 ```
 
 11. The flow is completed and, hopefully, we now have a happy customer for getting a delicious and nutricious pizza in such fast manner. The webapp, if on the order status page (in this case http://127.0.0.1:8000/orders/b32ad) will display in real time the status of the pizza, all of that thanks to the CQRS pattern. In a real life scenario that could be easily achieved by using frameworks such as ReactJS, however in this project it is used JQuery/AJAX async calls to accomplish that:
-![image](static/images/docs/webapp_order_delivered.png)
+![image](app/static/images/docs/webapp_order_delivered.png)
 
 #### **IMPORTANT 1**
 Have you noticed the microservice **Deliver Pizza** is stateful as it has two steps?
@@ -415,7 +415,7 @@ One very important element of any Kafka consumer is by handling OS signals to be
 ```
 
 ### Demo (happy path)
-![image](static/images/docs/demo.gif)
+![image](app/static/images/docs/demo.gif)
 
 Enjoy!
 

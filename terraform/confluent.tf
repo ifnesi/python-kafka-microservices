@@ -252,7 +252,7 @@ resource "confluent_schema" "avro_schemas" {
     rest_endpoint = data.confluent_schema_registry_cluster.sr.rest_endpoint
     subject_name  = "${each.value}-value"
     format        = "AVRO"
-    schema        = file("${path.module}/../schemas/${each.value}.avro")
+    schema        = file("${path.module}/../app/schemas/${each.value}.avro")
     credentials {
         key    = confluent_api_key.sr_key.id
         secret = confluent_api_key.sr_key.secret
@@ -365,8 +365,8 @@ output "flink_statement_pizza_status_insert" {
 # Generate Python Kafka Config File
 # --------------------------------------------------------
 resource "local_file" "kafka_config" {
-    filename = "${path.module}/../config_kafka/cc_demo.ini"
-    content = templatefile("${path.module}/scripts/kafka_config_template.ini", {
+    filename = "${path.module}/../app/config/confluent_cloud.ini"
+    content = templatefile("${path.module}/confluent_cloud_template.ini", {
         kafka_bootstrap_servers = replace(confluent_kafka_cluster.cc_kafka_cluster.bootstrap_endpoint, "SASL_SSL://", "")
         kafka_api_key           = confluent_api_key.app_kafka_key.id
         kafka_api_secret        = confluent_api_key.app_kafka_key.secret

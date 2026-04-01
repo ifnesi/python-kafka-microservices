@@ -1,0 +1,63 @@
+{
+  "type": "record",
+  "name": "PizzaDemoOrdered",
+  "namespace": "com.confluent.pizza",
+  "doc": "Schema for pizza order events",
+  "fields":
+    [
+      {
+        "name": "status",
+        "type": "int",
+        "doc": "Status code for the pizza order"
+      },
+      {
+        "name": "timestamp",
+        "type": "long",
+        "doc": "Event timestamp in milliseconds since epoch"
+      },
+      {
+        "name": "order",
+        "doc": "Complete order details including toppings and customer information",
+        "type": {
+          "type": "record",
+          "name": "OrderDetails",
+          "doc": "Pizza order details",
+          "fields": [
+            {
+              "name": "extra_toppings",
+              "type": {
+                "type": "array",
+                "items": "string"
+              },
+              "doc": "List of extra toppings requested"
+            },
+            {
+              "name": "sauce",
+              "type": "string",
+              "doc": "Type of sauce"
+            },
+            {
+              "name": "cheese",
+              "type": "string",
+              "doc": "Type of cheese"
+            },
+            {
+              "name": "main_topping",
+              "type": "string",
+              "doc": "Primary topping"
+            },
+            {
+              "name": "customer_id",
+              "type": "string",
+              "doc": "Unique customer identifier"
+            },
+            {
+              "name": "username",
+              "type": "string",
+              "doc": "Customer username"
+            }
+          ]
+        }
+      }
+    ]
+  }
