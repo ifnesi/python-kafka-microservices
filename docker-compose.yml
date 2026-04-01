@@ -1,8 +1,11 @@
 services:
-  # Pizza Microservices - All-in-One Container
-  # Runs all microservices and webapp in a single container
+  # Pizza Microservices - All-in-One Container with React Frontend
+  # Runs all microservices and webapp with React frontend in a single container
   pizza-app:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: confluent-pizza:latest
     container_name: pizza-app
     command:
       - sh
@@ -22,7 +25,6 @@ services:
       - ./app/config:/app/config:ro
       - ./app/schemas:/app/schemas:ro
       - ./app/static:/app/static:ro
-      - ./app/templates:/app/templates:ro
     environment:
       - PYTHONUNBUFFERED=1
     restart: unless-stopped

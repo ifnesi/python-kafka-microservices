@@ -7,4 +7,5 @@ fastavro
 requests
 flask
 flask-login
+flask-cors
 gunicorn

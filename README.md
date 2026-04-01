@@ -41,7 +41,7 @@ CQRS and event sourcing can complement each other, but they are distinct pattern
 
 ### High Level View
 This pizza takeaway shop ecosystem was designed using Python and kept simple for demo/learning purposes. The following applications and microservices were created:
-- **Web application** using the Flask framework (```webapp.py```) that allows users to login, customize their pizza, place orders, and track order status. This webapp serves as the **Command** portion of the CQRS pattern. For simplicity, a SQLite3 state store* is used as the materialized view between Command and Query. However, in a real-world scenario, this could be an in-memory data store or Flink
+- **Web application** using the Python Flask and REACT frameworks (```webapp.py```) that allows users to login, customize their pizza, place orders, and track order status. This webapp serves as the **Command** portion of the CQRS pattern. For simplicity, a SQLite3 state store* is used as the materialized view between Command and Query. However, in a real-world scenario, this could be an in-memory data store or Flink
 - Once the pizza is ordered, it goes through four microservices (following the same flow as a real pizza shop):
   - **Assemble the pizza** as per order (```msvc_assemble.py```)
   - **Bake the pizza** (```msvc_bake.py```)

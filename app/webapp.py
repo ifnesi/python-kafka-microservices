@@ -23,7 +23,8 @@ import uuid
 import logging
 import datetime
 
-from flask import Flask, render_template, request, session, redirect, url_for, jsonify
+from flask import Flask, request, session, jsonify, send_from_directory
+from flask_cors import CORS
 from flask_login import (
     UserMixin,
     LoginManager,
@@ -107,10 +108,11 @@ with GRACEFUL_SHUTDOWN as _:
 # Webapp (Flask)
 app = Flask(
     __name__,
-    static_folder="static",
-    template_folder="templates",
+    static_folder="frontend/build",
+    static_url_path="",
 )
 app.config["SECRET_KEY"] = "718d5fec-cc52-4b29-b3dd-9c2e7b97266e"
+CORS(app, supports_credentials=True)
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "login"
@@ -138,7 +140,7 @@ def view_logs():
 
 @login_manager.unauthorized_handler
 def unauthorized():
-    return redirect(url_for("login"))
+    return jsonify({"error": "Unauthorized"}), 401
 
 
 @login_manager.user_loader
@@ -146,54 +148,57 @@ def load_user(customer_id):
     return User(id=customer_id)
 
 
-@app.route("/login", methods=["GET"])
-def login():
+@app.route("/api/auth/check", methods=["GET"])
+def check_auth():
     if current_user.is_authenticated:
-        return redirect(url_for("view_menu"))
+        return jsonify({
+            "authenticated": True,
+            "username": session.get("username", "Anonymous"),
+            "customer_id": session.get("customer_id", "")
+        })
     else:
-        return render_template(
-            "login.html",
-            title="Login",
-        )
+        return jsonify({"authenticated": False})
 
 
-@app.route("/login", methods=["POST"])
+@app.route("/api/auth/login", methods=["POST"])
 def do_login():
-    request_form = dict(request.form)
+    data = request.get_json()
     session["customer_id"] = uuid.uuid4().hex
-    session["username"] = request_form.get("username", "Anonymous").strip()[:16]
+    session["username"] = data.get("username", "Anonymous").strip()[:16]
     login_user(
         User(session["username"]),
         duration=datetime.timedelta(hours=1),
         force=True,
     )
-    return redirect(url_for("view_menu"))
+    return jsonify({
+        "success": True,
+        "username": session["username"],
+        "customer_id": session["customer_id"]
+    })
 
 
-@app.route("/logout", methods=["GET"])
+@app.route("/api/auth/logout", methods=["POST"])
 @login_required
 def logout():
     logout_user()
     session.pop("username", None)
     session.pop("customer_id", None)
-    return redirect(url_for("login"))
+    return jsonify({"success": True})
 
 
-@app.route("/", methods=["GET"])
+@app.route("/api/menu", methods=["GET"])
 @login_required
 def view_menu():
-    """View menu to order a pizza"""
-    return render_template(
-        "menu.html",
-        title="Menu",
-        sauces=SYS_CONFIG["pizza"]["sauce"],
-        cheeses=SYS_CONFIG["pizza"]["cheese"],
-        main_toppings=SYS_CONFIG["pizza"]["main_topping"],
-        extra_toppings=SYS_CONFIG["pizza"]["extra_toppings"],
-    )
+    """Get pizza menu options"""
+    return jsonify({
+        "sauces": SYS_CONFIG["pizza"]["sauce"],
+        "cheeses": SYS_CONFIG["pizza"]["cheese"],
+        "main_toppings": SYS_CONFIG["pizza"]["main_topping"],
+        "extra_toppings": SYS_CONFIG["pizza"]["extra_toppings"],
+    })
 
 
-@app.route("/", methods=["POST"])
+@app.route("/api/orders", methods=["POST"])
 @login_required
 def order_pizza():
     """Process pizza order request"""
@@ -201,21 +206,25 @@ def order_pizza():
         # Generate order unique ID
         order_id = uuid.uuid4().hex[-8:]
 
-        # Get request form
-        request_form = dict(request.form)
-        request_form.pop("extra_topping", None)
-        request_form["customer_id"] = session["customer_id"]
-        request_form["username"] = session["username"]
+        # Get request data
+        data = request.get_json()
+        order_data = {
+            "sauce": data.get("sauce"),
+            "cheese": data.get("cheese"),
+            "main_topping": data.get("main_topping"),
+            "customer_id": session["customer_id"],
+            "username": session["username"],
+        }
 
         # Get extra topping list
-        extra_toppings = request.form.getlist("extra_topping") or list()
+        extra_toppings = data.get("extra_toppings", [])
 
         order_details = {
             "status": SYS_CONFIG["status-id"]["order_placed"],
             "timestamp": timestamp_now(),
             "order": {
                 "extra_toppings": extra_toppings,
-                **request_form,
+                **order_data,
             },
         }
 
@@ -255,15 +264,13 @@ def order_pizza():
         )
         PRODUCER.flush()
 
-        return redirect(
-            url_for(
-                "get_order",
-                order_id=order_id,
-            )
-        )
+        return jsonify({
+            "success": True,
+            "order_id": order_id
+        })
 
 
-@app.route("/orders", methods=["GET"])
+@app.route("/api/orders", methods=["GET"])
 @login_required
 def view_orders():
     """View all orders for the customer_id"""
@@ -285,17 +292,15 @@ def view_orders():
                         SYS_CONFIG["state-store-orders"]["table_orders_retention_hours"]
                     ),
                 )
-            return render_template(
-                "view_orders.html",
-                title="Orders",
-                order_ids=db.get_orders(session["customer_id"]),
-            )
+            return jsonify({
+                "orders": db.get_orders(session["customer_id"])
+            })
 
 
-@app.route("/orders/<order_id>", methods=["PUT"])
+@app.route("/api/orders/<order_id>/status", methods=["GET"])
 @login_required
 def get_order_ajax(order_id):
-    """View order by order_id (AJAX call)"""
+    """View order status by order_id"""
     with GRACEFUL_SHUTDOWN as _:
         with DB(
             ORDERS_DB,
@@ -306,14 +311,14 @@ def get_order_ajax(order_id):
                 customer_id=session["customer_id"],
             )
             if order_details is not None:
-                return {
+                return jsonify({
                     "str": order_details["status_str"],
                     "status": order_details["status"],
-                }
-    return ""
+                })
+    return jsonify({"error": "Order not found"}), 404
 
 
-@app.route("/orders/<order_id>", methods=["GET"])
+@app.route("/api/orders/<order_id>", methods=["GET"])
 @login_required
 def get_order(order_id: str):
     """View order by order_id"""
@@ -328,36 +333,29 @@ def get_order(order_id: str):
             )
             if order_details is not None:
                 # Order exists
-                return render_template(
-                    "view_order.html",
-                    title="Order",
-                    order_id=order_id,
-                    timestamp=datetime.datetime.fromtimestamp(
+                return jsonify({
+                    "order_id": order_id,
+                    "timestamp": datetime.datetime.fromtimestamp(
                         order_details["timestamp"] / 1000
                     ).strftime("%Y-%b-%d %H:%M:%S"),
-                    status=int(order_details["status"]),
-                    status_str=order_details["status_str"],
-                    status_delivered=SYS_CONFIG["status-id"]["delivered"],
-                    username=order_details["username"],
-                    order=f"""Sauce: {order_details["sauce"]}<br>
-                            Cheese: {order_details["cheese"]}<br>
-                            Main: {order_details["topping"]}<br>
-                            Extras: {order_details["extras"]}""",
-                )
+                    "status": int(order_details["status"]),
+                    "status_str": order_details["status_str"],
+                    "status_delivered": SYS_CONFIG["status-id"]["delivered"],
+                    "username": order_details["username"],
+                    "sauce": order_details["sauce"],
+                    "cheese": order_details["cheese"],
+                    "topping": order_details["topping"],
+                    "extras": order_details["extras"],
+                })
             else:
-                # Order does not exists
-                return render_template(
-                    "view_order.html",
-                    title="Order",
-                    error=f"Order '{order_id}' not found",
-                    order_id=order_id,
-                )
+                # Order does not exist
+                return jsonify({"error": f"Order '{order_id}' not found"}), 404
 
 
-@app.route("/logs/<order_id>", methods=["PUT"])
+@app.route("/api/logs/<order_id>", methods=["GET"])
 @login_required
 def view_logs_ajax(order_id: str):
-    """View logs (AJAX call)"""
+    """View logs"""
     msvc_logs = {
         "all_logs": list(),
     }
@@ -400,6 +398,48 @@ def view_logs_ajax(order_id: str):
             "all_logs": f"No logs found for order_id {order_id}",
         }
     return jsonify(msvc_logs)
+
+
+# Serve static files (React build assets and images)
+@app.route("/static/<path:filename>")
+def serve_static(filename):
+    """Serve static files from React build or app/static"""
+    # First, try to serve from React build's static folder (JS, CSS)
+    react_static_path = os.path.join(app.static_folder, "static", filename)
+    if os.path.exists(react_static_path):
+        return send_from_directory(os.path.join(app.static_folder, "static"), filename)
+
+    # Otherwise, serve from app/static (images)
+    return send_from_directory("static", filename)
+
+
+# Custom 404 error handler - serve React app
+@app.errorhandler(404)
+def not_found(e):
+    """Serve React app for all 404 errors (let React Router handle routing)"""
+    # Don't intercept API 404s - return JSON
+    if request.path.startswith('/api/'):
+        return jsonify({"error": "Not found"}), 404
+
+    # For all other paths, serve React app
+    return send_from_directory(app.static_folder, "index.html")
+
+
+# Serve React App
+@app.route("/", defaults={"path": ""})
+@app.route("/<path:path>")
+def serve(path):
+    """Serve React app for all non-API routes"""
+    # Skip API routes (they're handled above)
+    if path.startswith('api/'):
+        return jsonify({"error": "Not found"}), 404
+
+    # Try to serve file from React build (for assets like favicon.ico)
+    if path != "" and os.path.exists(os.path.join(app.static_folder, path)):
+        return send_from_directory(app.static_folder, path)
+
+    # Otherwise serve React index.html (React Router will handle the routing)
+    return send_from_directory(app.static_folder, "index.html")
 
 
 ########
